@@ -11,7 +11,7 @@ import (
 var controllerLogger = logger.NewLogger("controller")
 
 // HandleRequest http requests
-func HandleRequest() {
+func HandleRequest(port string) error {
 
 	routes := mux.NewRouter().StrictSlash(true)
 
@@ -37,5 +37,5 @@ func HandleRequest() {
 	routes.HandleFunc("/sensorAverageValue", getSensorAverageValue).Methods("GET")
 	routes.HandleFunc("/sensorsCorrelationCoefficient", getSensorsCorrelationCoefficient).Methods("GET")
 
-	controllerLogger.Panic(http.ListenAndServe(":8081", routes))
+	return http.ListenAndServe(fmt.Sprintf(":%s", port), routes)
 }

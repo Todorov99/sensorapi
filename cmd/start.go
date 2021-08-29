@@ -13,10 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package cmd
 
-import "github.com/Todorov99/server/cmd"
+import (
+	"github.com/Todorov99/server/pkg/controller"
+	"github.com/spf13/cobra"
+)
 
-func main() {
-	cmd.Execute()
+var (
+	port string
+)
+
+// startCmd represents the start command
+var startCmd = &cobra.Command{
+	Use:   "start",
+	Short: "Start http web server",
+	Long:  `Start is command line that starts a http web server`,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return controller.HandleRequest(port)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(startCmd)
+	startCmd.Flags().StringVarP(&port, "port", "p", "8080", "The port of the server")
 }
