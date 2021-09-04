@@ -10,10 +10,8 @@ import (
 	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/repository/query"
 
-	//influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api/write"
-	//"github.com/influxdata/influxdb/client/v2"
 )
 
 func createPoint(data models.Measurement) *write.Point {
@@ -40,7 +38,7 @@ func writePointToBatch(measurementData models.Measurement) {
 		influx.InfluxdbClient.Close()
 	}()
 
-	writeAPI := influx.InfluxdbClient.WriteAPIBlocking("my-org", "my-bucket")
+	writeAPI := influx.InfluxdbClient.WriteAPIBlocking(influx.Org, influx.Bucket)
 
 	err := writeAPI.WritePoint(context.Background(), createPoint(measurementData))
 	if err != nil {
@@ -53,7 +51,7 @@ func writePointToBatch(measurementData models.Measurement) {
 func executeSelectQueryInflux(querry string, args ...interface{}) ([]interface{}, error) {
 	var measurement []interface{}
 
-	queryAPI := influx.InfluxdbClient.QueryAPI("my-org")
+	queryAPI := influx.InfluxdbClient.QueryAPI(influx.Org)
 
 	startTimestamp := args[0]
 	endTimestamp := args[1]

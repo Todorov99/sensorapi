@@ -21,7 +21,7 @@ var InfluxdbClient influxClient.Client
 const (
 	token  = `EOrpjNFDzHgKh-9Mpimun7SaWohfSUTXRbyJGTCQCrLM8vXvR10QXMvi4VPg8JgnVp6nIyC2VVK82PMAW08EkQ==`
 	Org    = "my-org"
-	bucket = "my-bucket"
+	Bucket = "my-bucket"
 )
 
 func init() {

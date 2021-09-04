@@ -47,7 +47,12 @@ func (m *measurementRepository) Add(args ...string) error {
 		return fmt.Errorf("invalid timestamp")
 	}
 
-	addMeasurementBindingModel := models.Measurement{args[0], args[1], args[2], args[3]}
+	addMeasurementBindingModel := models.Measurement{
+		MeasuredAt: args[0],
+		Value:      args[1],
+		SensorID:   args[2],
+		DeviceID:   args[3],
+	}
 
 	writePointToBatch(addMeasurementBindingModel)
 	return nil
