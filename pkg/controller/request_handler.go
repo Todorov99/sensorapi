@@ -15,9 +15,6 @@ func HandleRequest(port string) error {
 
 	routes := mux.NewRouter().StrictSlash(true)
 
-	routes.HandleFunc("/test", func(rw http.ResponseWriter, r *http.Request) {
-		fmt.Fprintln(rw, "Testing")
-	})
 	routes.HandleFunc("/device/{id}", createDeviceController().Get).Methods("GET")
 	routes.HandleFunc("/device", getAllDevices).Methods("GET")
 	routes.HandleFunc("/device", createDeviceController().Post).Methods("POST")

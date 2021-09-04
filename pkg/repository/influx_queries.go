@@ -1,35 +1,28 @@
 package repository
 
 import (
-	"errors"
+	"context"
 	"fmt"
-
 	"strconv"
 	"time"
 
 	"github.com/Todorov99/server/pkg/database/influx"
 	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/repository/query"
 
-	"github.com/influxdata/influxdb/client/v2"
+	//influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api/write"
+	//"github.com/influxdata/influxdb/client/v2"
 )
 
-func createBatchPoint() client.BatchPoints {
+func createPoint(data models.Measurement) *write.Point {
 
-	batchPoint, err := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  influx.DbName,
-		Precision: "s",
-	})
-
+	_, err := time.Parse(time.RFC3339, data.MeasuredAt)
 	if err != nil {
-		//	logger.ErrorLogger.Fatalln(err)
+		repositoryLogger.Panic(err)
 	}
 
-	return batchPoint
-}
-
-func createPoint(data models.Measurement) client.Point {
-
-	time, err := time.Parse(time.RFC3339, data.MeasuredAt)
 	value, _ := strconv.ParseFloat(data.Value, 64)
 
 	tags := map[string]string{"deviceID": data.DeviceID, "sensorID": data.SensorID}
@@ -37,53 +30,56 @@ func createPoint(data models.Measurement) client.Point {
 		"value": value,
 	}
 
-	point, err := client.NewPoint("sensor", tags, fields, time)
+	point := influxdb2.NewPoint("sensor", tags, fields, time.Now())
 
-	if err != nil {
-		//	logger.ErrorLogger.Fatalln(err)
-	}
-
-	return *point
+	return point
 }
 
 func writePointToBatch(measurementData models.Measurement) {
+	defer func() {
+		influx.InfluxdbClient.Close()
+	}()
 
-	batchPoint := createBatchPoint()
+	writeAPI := influx.InfluxdbClient.WriteAPIBlocking("my-org", "my-bucket")
 
-	point := createPoint(measurementData)
-
-	batchPoint.AddPoint(&point)
-
-	if err := influx.InfluxdbClient.Write(batchPoint); err != nil {
-		//	logger.ErrorLogger.Fatalln(err)
-	}
-
-	if err := influx.InfluxdbClient.Close(); err != nil {
-		//logger.ErrorLogger.Fatalln(err)
+	err := writeAPI.WritePoint(context.Background(), createPoint(measurementData))
+	if err != nil {
+		repositoryLogger.Error(err)
+		repositoryLogger.Panic(err)
 	}
 
 }
 
-func executeSelectQueryInflux(querry string, args ...interface{}) ([][]interface{}, error) {
+func executeSelectQueryInflux(querry string, args ...interface{}) ([]interface{}, error) {
+	var measurement []interface{}
 
-	influxQuery := client.Query{
-		Command:  fmt.Sprintf(querry, args...),
-		Database: influx.DbName,
-	}
+	queryAPI := influx.InfluxdbClient.QueryAPI("my-org")
 
-	response, err := influx.InfluxdbClient.Query(influxQuery)
+	startTimestamp := args[0]
+	endTimestamp := args[1]
+	deviceID := args[2]
+	sensorID := args[3]
 
+	influxQuery := fmt.Sprintf(query.GetSensorAndDeviceBeetweenTimestampQuery, startTimestamp, endTimestamp, deviceID, sensorID)
+
+	queryResult, err := queryAPI.Query(context.Background(), influxQuery)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed executing query: %q, err: %w", influxQuery, err)
 	}
 
-	if response.Results == nil {
-		return nil, errors.New("There is not available measurements")
+	for queryResult.Next() {
+		measurement = append(measurement, models.Measurement{
+			MeasuredAt: queryResult.Record().Time().String(),
+			Value:      strconv.FormatFloat(queryResult.Record().ValueByKey("_value").(float64), 'f', -1, 64),
+			SensorID:   queryResult.Record().ValueByKey("sensorID").(string),
+			DeviceID:   queryResult.Record().ValueByKey("deviceID").(string),
+		})
 	}
 
-	if response.Results[0].Series == nil {
-		return nil, errors.New("There is not available measurements")
+	if queryResult.Err() != nil {
+		repositoryLogger.Errorf("query error: %w", queryResult.Err())
+		return measurement, queryResult.Err()
 	}
 
-	return response.Results[0].Series[0].Values, nil
+	return measurement, nil
 }

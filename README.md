@@ -46,3 +46,7 @@ docker inspect <containerID>
 ```
 
 - Access to pgAdmin from the browser http://localhost:5050 (The port is that specified with -p flag in docker run command)
+
+
+
+https://docs.influxdata.com/influxdb/v2.0/reference/flux/stdlib/built-in/transformations/range/
