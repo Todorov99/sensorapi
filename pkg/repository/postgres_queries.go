@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/Todorov99/server/pkg/database/postgres"
+	"github.com/Todorov99/server/pkg/repository/query"
 )
 
 func executeSelectQuery(query string, args ...interface{}) (string, error) {
@@ -29,38 +30,32 @@ func executeSelectQuery(query string, args ...interface{}) (string, error) {
 }
 
 func executeModifyingQuery(query string, args ...interface{}) error {
-
 	_, err := postgres.DatabaseConnection.Exec(query, args...)
-
 	if err != nil {
-		//	logger.ErrorLogger.Println(err)
-		err = errors.New("You've entered incorrect device data")
+		return fmt.Errorf("failed executing query %q with arguments %q: %w", query, args, err)
 	}
 
-	return err
+	return nil
 }
 
 func checkForExistingSensorByID(id string) bool {
-
-	existingSensor, _ := executeSelectQuery("Select name from sensor where id=$1", id)
+	existingSensor, _ := executeSelectQuery(query.GetSensorNameByID, id)
 	return existingSensor != ""
 }
 
 func checkForExistingDeviceByID(id string) bool {
-
-	existingDevice, _ := executeSelectQuery("Select name from device where id=$1", id)
-
+	existingDevice, _ := executeSelectQuery(query.GetDeviceNameByID, id)
 	return existingDevice != ""
 }
 
 func checkForExistingDevicesAndSensors(deviceID string, sensorID string) error {
-
+	repositoryLogger.Info("Checking for existing device and sensor...")
 	if !checkForExistingDeviceByID(deviceID) {
-		return errors.New("There is not device with such id")
+		return fmt.Errorf("failed getting device with %s ID", deviceID)
 	}
 
 	if !checkForExistingSensorByID(sensorID) {
-		return errors.New("There is not sensor with such id")
+		return fmt.Errorf("failed getting sensor with %s ID", sensorID)
 	}
 
 	return nil

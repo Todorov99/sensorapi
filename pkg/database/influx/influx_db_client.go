@@ -2,34 +2,30 @@ package influx
 
 import (
 	"github.com/Todorov99/sensorcli/pkg/logger"
-	"github.com/influxdata/influxdb/client/v2"
+	influxClient "github.com/influxdata/influxdb-client-go/v2"
 )
 
 var influxLogger = logger.NewLogger("./influx")
 
 const (
-	address string = "http://influx:8086/"
+	address string = "http://localhost:8086/"
 	// DbName is influxdb name.
 	DbName           string = "sensorCLI"
 	username         string = "todor"
-	influxDbpassword string = "1234"
+	influxDbpassword string = "Abcd1234!"
 )
 
-// InfluxdbClient opens influx connection.
-var InfluxdbClient client.Client
+var InfluxdbClient influxClient.Client
+
+//TODO property file should be implemented
+const (
+	token  = `EOrpjNFDzHgKh-9Mpimun7SaWohfSUTXRbyJGTCQCrLM8vXvR10QXMvi4VPg8JgnVp6nIyC2VVK82PMAW08EkQ==`
+	Org    = "my-org"
+	Bucket = "my-bucket"
+)
 
 func init() {
-
-	dbClient, err := client.NewHTTPClient(client.HTTPConfig{
-		Password: influxDbpassword,
-		Addr:     address,
-		Username: username,
-	})
-
-	if err != nil {
-		influxLogger.Panic(err)
-	}
-
+	influxLogger.Info("Initializing influx db 2.0 client")
+	dbClient := influxClient.NewClient(address, token)
 	InfluxdbClient = dbClient
-
 }

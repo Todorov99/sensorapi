@@ -6,8 +6,6 @@ import (
 
 	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/repository"
-
-	"github.com/gorilla/mux"
 )
 
 var device = models.Device{}
@@ -61,10 +59,6 @@ func (d *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
 
 	device, err := deviceRepository.Delete(deviceID)
 	respond(w, "You successfully delete your device: ", "Device DELETE query execution.", err, device, http.StatusConflict)
-}
-
-func getIDFromPathVariable(r *http.Request) string {
-	return mux.Vars(r)["id"]
 }
 
 func getAllDevices(w http.ResponseWriter, r *http.Request) {

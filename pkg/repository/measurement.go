@@ -2,136 +2,130 @@ package repository
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"math"
 	"time"
 
 	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/repository/query"
 )
 
 type measurementRepository struct{}
 
 func (m *measurementRepository) GetAll() (interface{}, error) {
-	return nil, errors.New("Not Implemented")
+	return nil, nil
 }
 
+// GetByID gets measurements for current sensor ID and device ID
+// between current timestamp
 func (m *measurementRepository) GetByID(args ...string) (interface{}, error) {
-	err := checkForExistingDevicesAndSensors(args[0], args[1])
-
+	repositoryLogger.Infof("Getting measurements between %s - %s for device ID: %s and sensor ID: %s")
+	err := checkForExistingDevicesAndSensors(args[2], args[3])
 	if err != nil {
-		return nil, err
+		msg := "failed checking existing device %s and sensor %s"
+		repositoryLogger.Errorf(msg, args[2], args[3])
+		return nil, fmt.Errorf(msg, args[2], args[3])
 	}
 
-	var measurements []models.Measurement
-	var currentMeasurement models.Measurement
-
-	querry := "select * from sensor where deviceID = '%s' and sensorID = '%s'"
-
-	response, err := executeSelectQueryInflux(querry, args[0], args[1])
-
+	measurements, err := executeSelectQueryInflux(query.GetSensorAndDeviceBeetweenTimestampQuery, args[0], args[1], args[2], args[3])
 	if err != nil {
 		return 0, err
-	}
-
-	for _, i := range response {
-
-		currentMeasurement.MeasuredAt = i[0].(string)
-		currentMeasurement.DeviceID = i[1].(string)
-		currentMeasurement.SensorID = i[2].(string)
-		currentMeasurement.Value = i[3].(json.Number).String()
-
-		measurements = append(measurements, currentMeasurement)
-
 	}
 
 	return measurements, nil
 }
 
+//Add adds measurement into influx 2.0 db
 func (m *measurementRepository) Add(args ...string) error {
 	err := checkForExistingDevicesAndSensors(args[3], args[2])
-
 	if err != nil {
 		return err
 	}
 
 	_, err = time.Parse(time.RFC3339, args[0])
-
 	if err != nil {
-		return errors.New("Invalid timestamp")
+		return fmt.Errorf("invalid timestamp")
 	}
 
-	addMeasurementBindingModel := models.Measurement{args[0], args[1], args[2], args[3]}
+	addMeasurementBindingModel := models.Measurement{
+		MeasuredAt: args[0],
+		Value:      args[1],
+		SensorID:   args[2],
+		DeviceID:   args[3],
+	}
 
 	writePointToBatch(addMeasurementBindingModel)
 	return nil
 }
 
 func (m *measurementRepository) Update(args ...string) error {
-	return errors.New("Not Implemented")
+	return nil
 }
 
 func (m *measurementRepository) Delete(name string) (interface{}, error) {
-	return nil, errors.New("Not Implemented")
+	return nil, nil
 }
 
 // GetAverageValueOfMeasurements gets average values between two timestamps.
 func GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime string, endTime string) (string, error) {
+	/*
+		err := checkForExistingDevicesAndSensors(deviceID, sensorID)
 
-	err := checkForExistingDevicesAndSensors(deviceID, sensorID)
+		if err != nil {
+			return "", err
+		}
 
-	if err != nil {
-		return "", err
-	}
+		querry := "select MEAN(value) from sensor where time > '%s' and time < '%s' and deviceID = '%s' and sensorID='%s'"
 
-	querry := "select MEAN(value) from sensor where time > '%s' and time < '%s' and deviceID = '%s' and sensorID='%s'"
+		response, err := executeSelectQueryInflux(querry, startTime, endTime, deviceID, sensorID)
 
-	response, err := executeSelectQueryInflux(querry, startTime, endTime, deviceID, sensorID)
+		if err != nil {
+			return "", err
+		}
 
-	if err != nil {
-		return "", err
-	}
-
-	return response[0][1].(json.Number).String(), nil
+		return response[0][1].(json.Number).String(), nil
+	*/
+	return "", nil
 }
 
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
 func GetSensorsCorrelationCoefficient(deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error) {
+	/*
+		err := checkForExistingDevicesAndSensors(deviceID1, sensorID1)
 
-	err := checkForExistingDevicesAndSensors(deviceID1, sensorID1)
+		if err != nil {
+			return 0, err
+		}
 
-	if err != nil {
-		return 0, err
-	}
+		sensorValues := "select value from sensor where deviceID='%s' and sensorID='%s' and time > '%s' and time < '%s'"
+		countQuery := "select count(value) from sensor where deviceID='%s' and sensorID='%s' and time > '%s' and time < '%s'"
 
-	sensorValues := "select value from sensor where deviceID='%s' and sensorID='%s' and time > '%s' and time < '%s'"
-	countQuery := "select count(value) from sensor where deviceID='%s' and sensorID='%s' and time > '%s' and time < '%s'"
+		firstSensorValues, err := executeSelectQueryInflux(sensorValues, deviceID1, sensorID1, startTime, endTime)
 
-	firstSensorValues, err := executeSelectQueryInflux(sensorValues, deviceID1, sensorID1, startTime, endTime)
+		if err != nil {
+			return 0, err
+		}
 
-	if err != nil {
-		return 0, err
-	}
+		secondSensorValues, err := executeSelectQueryInflux(sensorValues, deviceID2, sensorID2, startTime, endTime)
 
-	secondSensorValues, err := executeSelectQueryInflux(sensorValues, deviceID2, sensorID2, startTime, endTime)
+		if err != nil {
+			return 0, err
+		}
 
-	if err != nil {
-		return 0, err
-	}
+		valueCount, err := executeSelectQueryInflux(countQuery, deviceID1, sensorID1, startTime, endTime)
 
-	valueCount, err := executeSelectQueryInflux(countQuery, deviceID1, sensorID1, startTime, endTime)
+		if err != nil {
+			return 0, err
+		}
 
-	if err != nil {
-		return 0, err
-	}
+		sensorValuesCount, _ := valueCount[0][1].(json.Number).Float64()
 
-	sensorValuesCount, _ := valueCount[0][1].(json.Number).Float64()
+		firstSensorValuesSum := appendDataToSlice(firstSensorValues)
+		secondSensorValuesSum := appendDataToSlice(secondSensorValues)
 
-	firstSensorValuesSum := appendDataToSlice(firstSensorValues)
-	secondSensorValuesSum := appendDataToSlice(secondSensorValues)
-
-	coef := correlationCoefficient(firstSensorValuesSum, secondSensorValuesSum, sensorValuesCount)
-
-	return coef, nil
+		coef := correlationCoefficient(firstSensorValuesSum, secondSensorValuesSum, sensorValuesCount)
+	*/
+	return 0, nil
 }
 
 func correlationCoefficient(firstSensorValues []float64, secondSensorValues []float64, valueCount float64) float64 {

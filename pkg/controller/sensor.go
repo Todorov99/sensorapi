@@ -46,9 +46,7 @@ func (s *sensorController) Post(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *sensorController) Put(w http.ResponseWriter, r *http.Request) {
-
 	err := json.NewDecoder(r.Body).Decode(&sensor)
-
 	if err != nil {
 		respond(w, "", "Sensor Put query", err, sensor, 500)
 		return
