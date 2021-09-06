@@ -1,5 +1,6 @@
 package query
 
+//PostresSQL queries
 const (
 	//Sensor queries
 	GetSensorNameByID       = "Select name from sensor where id=$1"
@@ -23,4 +24,33 @@ const (
 	GetDeviceByID      = `SELECT d.id, d.name, d.description from device as d where d.id=$1`
 	GetAllDevices      = `SELECT d.id, d.name, d.description from device as d`
 	GetHighestDeviceID = "SELECT max(id) + 1 from device"
+)
+
+//InfluxDB 2.0 queries
+const (
+	GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId = `from(bucket: "my-bucket")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r["_measurement"] == "sensor")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	`
+	GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId = `from(bucket: "my-bucket")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r["_measurement"] == "sensor")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	|> mean()
+	`
+
+	GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp = `from(bucket: "my-bucket")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r["_measurement"] == "sensor")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	|> keep(columns: ["_value"])
+	`
+
+	CountMeasurementValues = `from(bucket: "my-bucket")
+	|> range(start: %s, stop: %s)
+	|> filter(fn: (r) => r["_measurement"] == "sensor")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	|> count()
+	`
 )

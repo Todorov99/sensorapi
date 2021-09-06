@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Todorov99/server/pkg/models"
@@ -63,25 +64,29 @@ func (s *measurementController) Delete(w http.ResponseWriter, r *http.Request) {
 	respond(w, "", "Measurement DELETE query execution.", err, measurements, 501)
 }
 
-//TODO have to be adopted to influx 2.0 db client
 func getSensorAverageValue(w http.ResponseWriter, r *http.Request) {
 	var averageValue = make(map[string]string)
 
 	urlParams := getURLQueryParams(r, "deviceId", "sensorId", "startTime", "endTime")
-	value, err := repository.GetAverageValueOfMeasurements(urlParams[0], urlParams[1], urlParams[2]+"+03:00", urlParams[3]+"+03:00")
+	fmt.Println(urlParams)
+	value, err := repository.GetAverageValueOfMeasurements(urlParams[0], urlParams[1], urlParams[2], urlParams[3])
+	if err != nil {
+		respond(w, "", "Failed getting average value", err, 0, http.StatusNotFound)
+		return
+	}
+
 	averageValue["averageValue"] = value
 
 	respond(w, "", "Getting sensor average values.", err, averageValue, http.StatusNotFound)
-
 }
 
-//TODO have to be adopted to influx 2.0 db client
 func getSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
 
 	var correlationCoefficient = make(map[string]float64)
 
 	urlParams := getURLQueryParams(r, "deviceId1", "deviceId2", "sensorId1", "sensorId2", "startTime", "endTime")
-	value, err := repository.GetSensorsCorrelationCoefficient(urlParams[0], urlParams[1], urlParams[2], urlParams[3], urlParams[4]+"+03:00", urlParams[5]+"+03:00")
+	fmt.Println(urlParams)
+	value, err := repository.GetSensorsCorrelationCoefficient(urlParams[0], urlParams[1], urlParams[2], urlParams[3], urlParams[4], urlParams[5])
 
 	correlationCoefficient["correlationCoefficient"] = value
 	respond(w, "", "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)

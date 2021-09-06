@@ -8,7 +8,6 @@ import (
 
 	"github.com/Todorov99/server/pkg/database/influx"
 	"github.com/Todorov99/server/pkg/models"
-	"github.com/Todorov99/server/pkg/repository/query"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api/write"
@@ -54,30 +53,28 @@ func writePointToBatch(measurementData models.Measurement) {
 
 }
 
-func executeSelectQueryInflux(querry string, args ...interface{}) ([]interface{}, error) {
+func executeSelectQueryInflux(querry string, isType bool) ([]interface{}, error) {
 	var measurement []interface{}
 
 	queryAPI := influx.InfluxdbClient.QueryAPI(influx.Org)
 
-	startTimestamp := args[0]
-	endTimestamp := args[1]
-	deviceID := args[2]
-	sensorID := args[3]
-
-	influxQuery := fmt.Sprintf(query.GetSensorAndDeviceBeetweenTimestampQuery, startTimestamp, endTimestamp, deviceID, sensorID)
-
-	queryResult, err := queryAPI.Query(context.Background(), influxQuery)
+	queryResult, err := queryAPI.Query(context.Background(), querry)
 	if err != nil {
-		return nil, fmt.Errorf("failed executing query: %q, err: %w", influxQuery, err)
+		return nil, fmt.Errorf("failed executing query: %s, err: %w", querry, err)
 	}
 
 	for queryResult.Next() {
-		measurement = append(measurement, models.Measurement{
-			MeasuredAt: queryResult.Record().Time().String(),
-			Value:      strconv.FormatFloat(queryResult.Record().ValueByKey("_value").(float64), 'f', -1, 64),
-			SensorID:   queryResult.Record().ValueByKey("sensorID").(string),
-			DeviceID:   queryResult.Record().ValueByKey("deviceID").(string),
-		})
+		if !isType {
+			measurement = append(measurement, queryResult.Record().ValueByKey("_value"))
+		} else {
+			measurement = append(measurement, models.Measurement{
+				MeasuredAt: queryResult.Record().Time().String(),
+				Value:      strconv.FormatFloat(queryResult.Record().ValueByKey("_value").(float64), 'f', -1, 64),
+				SensorID:   queryResult.Record().ValueByKey("sensorID").(string),
+				DeviceID:   queryResult.Record().ValueByKey("deviceID").(string),
+			})
+		}
+
 	}
 
 	if queryResult.Err() != nil {
