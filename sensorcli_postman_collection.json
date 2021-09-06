@@ -1,0 +1,398 @@
+{
+	"info": {
+		"_postman_id": "1807fdd4-1f52-4615-b84c-1de948a0b6a0",
+		"name": "Diplomna",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "sensor",
+			"item": [
+				{
+					"name": "GetAllSensors",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/sensor",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"sensor"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetSensorByID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/sensor/9",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"sensor",
+								"9"
+							]
+						},
+						"description": "The sensor ID is passed as path variable to the request."
+					},
+					"response": []
+				},
+				{
+					"name": "AddSensor",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Testing\",\n    \"deviceId\": \"1\",\n    \"description\": \"Test description\",\n    \"unit\": \"C\",\n    \"sensorGroups\": \"CPU_USAGE\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/sensor",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"sensor"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DeleteSensorById",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/sensor/9",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"sensor",
+								"9"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UpdateSensor",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Testing\",\n    \"deviceId\": \"1\",\n    \"description\": \"Test description\",\n    \"unit\": \"C\",\n    \"sensorGroups\": \"CPU_TEMP\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/sensor/9",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"sensor",
+								"9"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "device",
+			"item": [
+				{
+					"name": "GetAllDevices",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/device",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"device"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetDeviceById",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/device/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"device",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DeleteDevice",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/device/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"device",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "UpdateDevice",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test device\",\n    \"description\": \"Update\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/device/2",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"device",
+								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AddDevice",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Test device\",\n    \"description\": \"Testing description\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/device",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"device"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "measurement",
+			"item": [
+				{
+					"name": "GetMeasurementBetweenTimestamp",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"startTime\": \"2021-09-04T23:30:00Z\",\n    \"endTime\": \"2021-09-06T17:00:00Z\",\n    \"sensorId\": \"2\",\n    \"deviceId\": \"1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/measurement",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"measurement"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "AddMeasurement",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"measuredAt\": \"2021-09-04T23:23:43.359165+03:00\",\n    \"value\": \"33\",\n    \"sensorId\": \"5\",\n    \"deviceId\": \"1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:8081/measurement",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"measurement"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetAverageValueOfMeasurement",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/sensorAverageValue?deviceId=1&sensorId=2&startTime=2021-09-04T23:30:00Z&endTime=2021-09-06T17:00:00Z",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"sensorAverageValue"
+							],
+							"query": [
+								{
+									"key": "deviceId",
+									"value": "1"
+								},
+								{
+									"key": "sensorId",
+									"value": "2"
+								},
+								{
+									"key": "startTime",
+									"value": "2021-09-04T23:30:00Z"
+								},
+								{
+									"key": "endTime",
+									"value": "2021-09-06T17:00:00Z"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GetCorelationCoeficient",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/sensorsCorrelationCoefficient?deviceId1=1&deviceId2=1&sensorId1=2&sensorId2=3&startTime=2021-09-04T23:30:00Z&endTime=2021-09-06T17:00:00Z",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "8081",
+							"path": [
+								"sensorsCorrelationCoefficient"
+							],
+							"query": [
+								{
+									"key": "deviceId1",
+									"value": "1"
+								},
+								{
+									"key": "deviceId2",
+									"value": "1"
+								},
+								{
+									"key": "sensorId1",
+									"value": "2"
+								},
+								{
+									"key": "sensorId2",
+									"value": "3"
+								},
+								{
+									"key": "startTime",
+									"value": "2021-09-04T23:30:00Z"
+								},
+								{
+									"key": "endTime",
+									"value": "2021-09-06T17:00:00Z"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
