@@ -2,54 +2,34 @@ package logger
 
 import (
 	"fmt"
-	"log"
+	"io"
 	"os"
+
+	"github.com/sirupsen/logrus"
 )
 
-type Logger struct {
-	errorLogger *log.Logger
-	infoLogger  *log.Logger
-	warnLogger  *log.Logger
-}
-
-func NewLogger(pkg string) Logger {
+func NewLogrus(pkg string, writer ...io.Writer) *logrus.Logger {
 	logFile, err := os.OpenFile(fmt.Sprintf("%s.log", pkg), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
-
 	if err != nil {
 		panic(err)
 	}
 
-	return Logger{
-		errorLogger: log.New(logFile, "ERROR: ", log.Ldate|log.Ltime|log.Lshortfile),
-		infoLogger:  log.New(logFile, "INFO: ", log.Ldate|log.Ltime),
-		warnLogger:  log.New(logFile, "WARN: ", log.Ldate|log.Ltime|log.Lshortfile),
+	writers := []io.Writer{
+		logFile,
 	}
-}
 
-func (l Logger) Info(v ...interface{}) {
-	l.infoLogger.Println(v...)
-}
+	writers = append(writers, writer...)
 
-func (l Logger) Infof(msg string, args ...interface{}) {
-	l.infoLogger.Printf(msg, args...)
-}
+	log := &logrus.Logger{
+		Out:       io.MultiWriter(writers...),
+		Hooks:     make(logrus.LevelHooks),
+		Level:     logrus.DebugLevel,
+		Formatter: &logrus.JSONFormatter{},
+	}
 
-func (l Logger) Warn(v ...interface{}) {
-	l.warnLogger.Println(v...)
-}
+	log.WithFields(logrus.Fields{
+		"package": pkg,
+	})
 
-func (l Logger) Warnf(msg string, args ...interface{}) {
-	l.warnLogger.Printf(msg, args...)
-}
-
-func (l Logger) Error(v ...interface{}) {
-	l.errorLogger.Println(v...)
-}
-
-func (l Logger) Errorf(msg string, args ...interface{}) {
-	l.errorLogger.Printf(msg, args...)
-}
-
-func (l Logger) Panic(v interface{}) {
-	l.errorLogger.Panic(v)
+	return log
 }

@@ -14,14 +14,16 @@ import (
 	"github.com/influxdata/influxdb-client-go/v2/api/write"
 )
 
-func createPoint(data models.Measurement) *write.Point {
-
+func createPoint(data models.Measurement) (*write.Point, error) {
 	_, err := time.Parse(time.RFC3339, data.MeasuredAt)
 	if err != nil {
-		repositoryLogger.Panic(err)
+		return nil, err
 	}
 
-	value, _ := strconv.ParseFloat(data.Value, 64)
+	value, err := strconv.ParseFloat(data.Value, 64)
+	if err != nil {
+		return nil, err
+	}
 
 	tags := map[string]string{"deviceID": data.DeviceID, "sensorID": data.SensorID}
 	fields := map[string]interface{}{
@@ -30,7 +32,7 @@ func createPoint(data models.Measurement) *write.Point {
 
 	point := influxdb2.NewPoint("sensor", tags, fields, time.Now())
 
-	return point
+	return point, nil
 }
 
 func writePointToBatch(measurementData models.Measurement) {
@@ -40,9 +42,13 @@ func writePointToBatch(measurementData models.Measurement) {
 
 	writeAPI := influx.InfluxdbClient.WriteAPIBlocking(influx.Org, influx.Bucket)
 
-	err := writeAPI.WritePoint(context.Background(), createPoint(measurementData))
+	influxDbPoint, err := createPoint(measurementData)
 	if err != nil {
-		repositoryLogger.Error(err)
+		repositoryLogger.Panic(fmt.Errorf("failed creating a influx DB point: %w", err))
+	}
+
+	err = writeAPI.WritePoint(context.Background(), influxDbPoint)
+	if err != nil {
 		repositoryLogger.Panic(err)
 	}
 

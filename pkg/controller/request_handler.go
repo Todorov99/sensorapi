@@ -3,12 +3,13 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/gorilla/mux"
 )
 
-var controllerLogger = logger.NewLogger("controller")
+var controllerLogger = logger.NewLogrus("controller", os.Stdout)
 
 // HandleRequest http requests
 func HandleRequest(port string) error {

@@ -1,11 +1,13 @@
 package influx
 
 import (
+	"os"
+
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	influxClient "github.com/influxdata/influxdb-client-go/v2"
 )
 
-var influxLogger = logger.NewLogger("./influx")
+var influxLogger = logger.NewLogrus("./influx", os.Stdout)
 
 const (
 	address string = "http://localhost:8086/"
