@@ -1,4 +1,4 @@
-# github.com/Todorov99/sensorcli v0.0.0-20210905095318-bc890f4a5b82
+# github.com/Todorov99/sensorcli v0.0.0-20210906161825-956cbe8dbf97
 ## explicit
 github.com/Todorov99/sensorcli/pkg/logger
 # github.com/deepmap/oapi-codegen v1.6.0
@@ -54,7 +54,8 @@ github.com/mitchellh/go-homedir
 github.com/mitchellh/mapstructure
 # github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
 ## explicit
-# github.com/pelletier/go-toml v1.9.3
+# github.com/pelletier/go-toml v1.9.4
+## explicit
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors

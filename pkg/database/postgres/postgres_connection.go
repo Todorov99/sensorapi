@@ -11,7 +11,7 @@ import (
 // DatabaseConnection opens postgres connection.
 var DatabaseConnection *sql.DB
 
-var postgresLogger = logger.NewLogrus("./postres", os.Stdout)
+var postgresLogger = logger.NewLogrus("postres", os.Stdout)
 
 func init() {
 	postgresLogger.Info("Initializing postgres DB client")

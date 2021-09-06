@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func NewLogrus(pkg string, writer ...io.Writer) *logrus.Logger {
+func NewLogrus(pkg string, writer ...io.Writer) *logrus.Entry {
 	logFile, err := os.OpenFile(fmt.Sprintf("%s.log", pkg), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		panic(err)
@@ -27,9 +27,10 @@ func NewLogrus(pkg string, writer ...io.Writer) *logrus.Logger {
 		Formatter: &logrus.JSONFormatter{},
 	}
 
-	log.WithFields(logrus.Fields{
-		"package": pkg,
-	})
-
-	return log
+	return &logrus.Entry{
+		Logger: log,
+		Data: logrus.Fields{
+			"package": pkg,
+		},
+	}
 }

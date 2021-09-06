@@ -7,7 +7,7 @@ import (
 	influxClient "github.com/influxdata/influxdb-client-go/v2"
 )
 
-var influxLogger = logger.NewLogrus("./influx", os.Stdout)
+var influxLogger = logger.NewLogrus("influx", os.Stdout)
 
 const (
 	address string = "http://localhost:8086/"

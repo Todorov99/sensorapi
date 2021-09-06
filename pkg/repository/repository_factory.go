@@ -6,7 +6,7 @@ import (
 	"github.com/Todorov99/sensorcli/pkg/logger"
 )
 
-var repositoryLogger = logger.NewLogrus("./repositroy", os.Stdout)
+var repositoryLogger = logger.NewLogrus("repositroy", os.Stdout)
 
 // CreateMeasurementRepository creates measurement reposiroty.
 func CreateMeasurementRepository() Repository {
