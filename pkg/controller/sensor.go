@@ -20,14 +20,15 @@ func createSensorController() IController {
 
 func (s *sensorController) Get(w http.ResponseWriter, r *http.Request) {
 	pathVariable := getIDFromPathVariable(r)
+	controllerLogger.Debugf("DEBUG path variable: %s", pathVariable)
 
 	if pathVariable != "" {
-		data, err := sensorRepository.GetAll()
+		data, err := sensorRepository.GetByID(pathVariable)
 		respond(w, "", "Sensor GET query execution.", err, data, http.StatusNotImplemented)
 		return
 	}
 
-	data, err := sensorRepository.GetByID()
+	data, err := sensorRepository.GetAll()
 	respond(w, "", "Sensor GET query execution.", err, data, http.StatusNotFound)
 }
 

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"time"
@@ -27,7 +26,13 @@ func (m *measurementRepository) GetByID(args ...string) (interface{}, error) {
 		return nil, fmt.Errorf(msg, args[2], args[3])
 	}
 
-	measurements, err := executeSelectQueryInflux(query.GetSensorAndDeviceBeetweenTimestampQuery, args[0], args[1], args[2], args[3])
+	startTimestamp := args[0]
+	endTimestamp := args[1]
+	deviceID := args[2]
+	sensorID := args[3]
+	influxQuery := fmt.Sprintf(query.GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId, startTimestamp, endTimestamp, deviceID, sensorID)
+
+	measurements, err := executeSelectQueryInflux(influxQuery, true)
 	if err != nil {
 		return 0, err
 	}
@@ -68,67 +73,52 @@ func (m *measurementRepository) Delete(name string) (interface{}, error) {
 
 // GetAverageValueOfMeasurements gets average values between two timestamps.
 func GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime string, endTime string) (string, error) {
-	/*
-		err := checkForExistingDevicesAndSensors(deviceID, sensorID)
+	repositoryLogger.Infof("Getting average value of measurements between %s - %s", startTime, endTime)
+	err := checkForExistingDevicesAndSensors(deviceID, sensorID)
+	if err != nil {
+		return "", err
+	}
 
-		if err != nil {
-			return "", err
-		}
+	influxQuery := fmt.Sprintf(query.GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId, startTime, endTime, deviceID, sensorID)
 
-		querry := "select MEAN(value) from sensor where time > '%s' and time < '%s' and deviceID = '%s' and sensorID='%s'"
+	response, err := executeSelectQueryInflux(influxQuery, true)
+	if err != nil {
+		return "", err
+	}
 
-		response, err := executeSelectQueryInflux(querry, startTime, endTime, deviceID, sensorID)
-
-		if err != nil {
-			return "", err
-		}
-
-		return response[0][1].(json.Number).String(), nil
-	*/
-	return "", nil
+	return response[0].(models.Measurement).Value, nil
 }
 
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
 func GetSensorsCorrelationCoefficient(deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error) {
-	/*
-		err := checkForExistingDevicesAndSensors(deviceID1, sensorID1)
+	repositoryLogger.Info("Getting correlation coficient...")
+	err := checkForExistingDevicesAndSensors(deviceID1, sensorID1)
+	if err != nil {
+		return 0, err
+	}
 
-		if err != nil {
-			return 0, err
-		}
+	repositoryLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID1, sensorID1)
+	firstSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID1, sensorID1), false)
+	if err != nil {
+		return 0, err
+	}
 
-		sensorValues := "select value from sensor where deviceID='%s' and sensorID='%s' and time > '%s' and time < '%s'"
-		countQuery := "select count(value) from sensor where deviceID='%s' and sensorID='%s' and time > '%s' and time < '%s'"
+	repositoryLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID2, sensorID2)
+	secondSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID2, sensorID2), false)
+	if err != nil {
+		return 0, err
+	}
 
-		firstSensorValues, err := executeSelectQueryInflux(sensorValues, deviceID1, sensorID1, startTime, endTime)
+	repositoryLogger.Info("Getting the count of values...")
+	valueCount, err := executeSelectQueryInflux(fmt.Sprintf(query.CountMeasurementValues, startTime, endTime, deviceID1, sensorID1), false)
+	if err != nil {
+		return 0, err
+	}
 
-		if err != nil {
-			return 0, err
-		}
-
-		secondSensorValues, err := executeSelectQueryInflux(sensorValues, deviceID2, sensorID2, startTime, endTime)
-
-		if err != nil {
-			return 0, err
-		}
-
-		valueCount, err := executeSelectQueryInflux(countQuery, deviceID1, sensorID1, startTime, endTime)
-
-		if err != nil {
-			return 0, err
-		}
-
-		sensorValuesCount, _ := valueCount[0][1].(json.Number).Float64()
-
-		firstSensorValuesSum := appendDataToSlice(firstSensorValues)
-		secondSensorValuesSum := appendDataToSlice(secondSensorValues)
-
-		coef := correlationCoefficient(firstSensorValuesSum, secondSensorValuesSum, sensorValuesCount)
-	*/
-	return 0, nil
+	return correlationCoefficient(firstSensorValues, secondSensorValues, parseFloat(valueCount[0])), nil
 }
 
-func correlationCoefficient(firstSensorValues []float64, secondSensorValues []float64, valueCount float64) float64 {
+func correlationCoefficient(firstSensorValues []interface{}, secondSensorValues []interface{}, valueCount float64) float64 {
 
 	sumFirstSensor := 0.0
 	sumSecondSensor := 0.0
@@ -142,14 +132,14 @@ func correlationCoefficient(firstSensorValues []float64, secondSensorValues []fl
 			break
 		}
 
-		sumFirstSensor = sumFirstSensor + firstSensorValues[i]
+		sumFirstSensor = sumFirstSensor + firstSensorValues[i].(float64)
 
-		sumSecondSensor = sumSecondSensor + secondSensorValues[i]
+		sumSecondSensor = sumSecondSensor + secondSensorValues[i].(float64)
 
-		sumBothSensorValues = sumBothSensorValues + firstSensorValues[i]*secondSensorValues[i]
+		sumBothSensorValues = sumBothSensorValues + firstSensorValues[i].(float64)*secondSensorValues[i].(float64)
 
-		squareSumFirstSensor = squareSumFirstSensor + firstSensorValues[i]*firstSensorValues[i]
-		squareSumSecondSensor = squareSumSecondSensor + secondSensorValues[i]*secondSensorValues[i]
+		squareSumFirstSensor = squareSumFirstSensor + firstSensorValues[i].(float64)*firstSensorValues[i].(float64)
+		squareSumSecondSensor = squareSumSecondSensor + secondSensorValues[i].(float64)*secondSensorValues[i].(float64)
 	}
 
 	return float64((valueCount*sumBothSensorValues - sumFirstSensor*sumSecondSensor)) /
@@ -157,14 +147,18 @@ func correlationCoefficient(firstSensorValues []float64, secondSensorValues []fl
 			(valueCount*squareSumSecondSensor - sumSecondSensor*sumSecondSensor))))
 }
 
-func appendDataToSlice(data [][]interface{}) []float64 {
+func parseFloat(v interface{}) float64 {
 
-	var dataSlice []float64
-
-	for _, i := range data {
-		num, _ := i[1].(json.Number).Float64()
-		dataSlice = append(dataSlice, num)
+	switch v.(type) {
+	case int64:
+		return float64(v.(int64))
+	case int32:
+		return float64(v.(int32))
+	case float64:
+		return float64(v.(float64))
+	case float32:
+		return float64(v.(float64))
 	}
 
-	return dataSlice
+	return 0
 }

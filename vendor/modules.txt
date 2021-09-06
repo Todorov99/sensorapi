@@ -1,10 +1,11 @@
-# github.com/Todorov99/sensorcli v0.0.0-20210718185247-7c914875d92b
+# github.com/Todorov99/sensorcli v0.0.0-20210906161825-956cbe8dbf97
 ## explicit
 github.com/Todorov99/sensorcli/pkg/logger
 # github.com/deepmap/oapi-codegen v1.6.0
 github.com/deepmap/oapi-codegen/pkg/runtime
 github.com/deepmap/oapi-codegen/pkg/types
-# github.com/fsnotify/fsnotify v1.4.9
+# github.com/fsnotify/fsnotify v1.5.1
+## explicit
 github.com/fsnotify/fsnotify
 # github.com/gorilla/mux v1.8.0
 ## explicit
@@ -53,14 +54,18 @@ github.com/mitchellh/go-homedir
 github.com/mitchellh/mapstructure
 # github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
 ## explicit
-# github.com/pelletier/go-toml v1.9.3
+# github.com/pelletier/go-toml v1.9.4
+## explicit
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
+# github.com/sirupsen/logrus v1.8.1
+github.com/sirupsen/logrus
 # github.com/spf13/afero v1.6.0
 github.com/spf13/afero
 github.com/spf13/afero/mem
-# github.com/spf13/cast v1.3.1
+# github.com/spf13/cast v1.4.1
+## explicit
 github.com/spf13/cast
 # github.com/spf13/cobra v1.2.1
 ## explicit
@@ -76,15 +81,19 @@ github.com/spf13/viper
 github.com/subosito/gotenv
 # golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 golang.org/x/net/publicsuffix
-# golang.org/x/sys v0.0.0-20210510120138-977fb7262007
+# golang.org/x/sys v0.0.0-20210903071746-97244b99971b
+## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
-# golang.org/x/text v0.3.5
+golang.org/x/sys/windows
+# golang.org/x/text v0.3.7
+## explicit
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 # gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 ## explicit
-# gopkg.in/ini.v1 v1.62.0
+# gopkg.in/ini.v1 v1.62.1
+## explicit
 gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2

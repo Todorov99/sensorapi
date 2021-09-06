@@ -7,7 +7,6 @@ import (
 )
 
 func respond(w http.ResponseWriter, respondMessage string, loggMessagge string, err error, model interface{}, statusCode int) {
-
 	controllerLogger.Info(loggMessagge)
 
 	if err != nil {
