@@ -115,21 +115,30 @@ func monitor(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
-	service := service.NewMeasurementService()
 
 	keys := r.URL.Query()
+
+	valueCfg := models.ValueCfg{}
+	decodeErr := json.NewDecoder(r.Body).Decode(&valueCfg)
+	if decodeErr != nil {
+		controllerLogger.Error(decodeErr)
+		return
+	}
 
 	response := make(chan interface{})
 	err := make(chan error)
 	done := make(chan bool)
 
+	service := service.NewMeasurementService(valueCfg)
 	go service.Monitor(r.Context(), keys.Get("duration"), []string{global.CpuUsageGroup, global.CpuTempGroup, global.MemoryGroup}, err, response, done)
 
 	for {
 		select {
 		case err := <-err:
 			if err != nil {
-				http.Redirect(w, r, "http://localhost:8081/static/warning.html", http.StatusMovedPermanently)
+				//TODO deside whether to redirect
+				respond(w, "", "Monitoring finished", nil, <-response, http.StatusOK)
+				//http.Redirect(w, r, "http://localhost:8081/static/warning.html", http.StatusMovedPermanently)
 				return
 			}
 		case <-done:
@@ -137,7 +146,6 @@ func monitor(w http.ResponseWriter, r *http.Request) {
 			return
 		case rs := <-response:
 			respond(w, "", "Monitoring...", nil, rs, http.StatusOK)
-
 		}
 	}
 

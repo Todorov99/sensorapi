@@ -8,6 +8,7 @@ import (
 	sensorcmd "github.com/Todorov99/sensorcli/cmd"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
 	"github.com/Todorov99/server/pkg/global"
+	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/repository"
 )
 
@@ -16,11 +17,13 @@ type MeasurementService interface {
 }
 
 type measurementService struct {
+	valueCfg   models.ValueCfg
 	repository repository.Repository
 }
 
-func NewMeasurementService() MeasurementService {
+func NewMeasurementService(valueCfg models.ValueCfg) MeasurementService {
 	return &measurementService{
+		valueCfg:   valueCfg,
 		repository: repository.CreateMeasurementRepository(),
 	}
 }
@@ -59,7 +62,7 @@ func (m measurementService) Monitor(ctx context.Context, duration string, sensor
 				return
 			}
 
-			metric, err := m.scanMetrics(measurements)
+			metric, err := m.scanMetrics(measurements, true)
 			if err != nil {
 				errChan <- err
 				response <- metric
@@ -71,25 +74,33 @@ func (m measurementService) Monitor(ctx context.Context, duration string, sensor
 	}
 }
 
-func (m measurementService) scanMetrics(metrics []sensor.Measurment) (interface{}, error) {
+func (m measurementService) scanMetrics(metrics []sensor.Measurment, addToDb bool) (interface{}, error) {
 
 	for _, metr := range metrics {
-		err := m.repository.Add(metr.MeasuredAt.Format(time.RFC3339), metr.Value, metr.SensorID, metr.DeviceID)
-		if err != nil {
-			return nil, err
+		if addToDb {
+			err := m.repository.Add(metr.MeasuredAt.Format(time.RFC3339), metr.Value, metr.SensorID, metr.DeviceID)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		switch metr.SensorID {
 		case global.TempSensor:
-			if metr.Value > "70" {
+			if metr.Value > m.valueCfg.TempMax {
 				return metr, fmt.Errorf("overheating warning")
 			}
 			continue
 		case global.FrequencySensor:
 			continue
 		case global.UsageSensor:
+			if metr.Value > m.valueCfg.UsageMax {
+				return metr, fmt.Errorf("usage problem")
+			}
 			continue
 		case global.MemoryAvailable:
+			if metr.Value > m.valueCfg.MemAvailableMax {
+				return metr, fmt.Errorf("mem available problem")
+			}
 			continue
 		case global.MemoryUsedParcent:
 			continue
