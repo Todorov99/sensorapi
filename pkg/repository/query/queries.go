@@ -53,4 +53,9 @@ const (
 	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
 	|> count()
 	`
+
+	GetAllMeasurementsFromStartTime = `from(bucket: "my-bucket")
+	|> range(start: 2021-09-04T23:30:00Z)
+	|> filter(fn: (r) => r["_measurement"] == "sensor")
+	`
 )

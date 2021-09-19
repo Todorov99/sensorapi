@@ -22,8 +22,8 @@ func (d *deviceController) Get(w http.ResponseWriter, r *http.Request) {
 
 	controllerLogger.Infof("Getting device with ID: %q", deviceID)
 
-	device, err := deviceRepository.GetByID(deviceID)
-	respond(w, "", "Device GET query execution.", err, device, http.StatusNotFound)
+	devices, err := deviceRepository.GetByID(deviceID)
+	respond(w, "", "Device GET query execution.", err, devices, http.StatusNotFound)
 }
 
 func (d *deviceController) Post(w http.ResponseWriter, r *http.Request) {

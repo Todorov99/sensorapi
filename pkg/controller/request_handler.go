@@ -14,7 +14,11 @@ var controllerLogger = logger.NewLogrus("controller", os.Stdout)
 // HandleRequest http requests
 func HandleRequest(port string) error {
 
+	fs := http.FileServer(http.Dir("/Users/t.todorov/Develop/server/resources/static"))
 	routes := mux.NewRouter().StrictSlash(true)
+
+	routes.PathPrefix("/static").Handler(http.StripPrefix("/static", fs))
+	http.Handle("/", routes)
 
 	routes.HandleFunc("/device/{id}", createDeviceController().Get).Methods("GET")
 	routes.HandleFunc("/device", getAllDevices).Methods("GET")
@@ -29,6 +33,7 @@ func HandleRequest(port string) error {
 	routes.HandleFunc("/sensor/{id}", createSensorController().Delete).Methods("DELETE")
 
 	routes.HandleFunc("/measurement", createMeasurementController().Get).Methods("GET")
+	routes.HandleFunc("/monitor", monitor).Methods("GET")
 	routes.HandleFunc("/measurement", createMeasurementController().Post).Methods("POST")
 	routes.HandleFunc("/measurement", createMeasurementController().Put).Methods("PUT")
 	routes.HandleFunc("/measurement", createMeasurementController().Delete).Methods("DELETE")

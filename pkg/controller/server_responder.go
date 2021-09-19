@@ -15,9 +15,16 @@ func respond(w http.ResponseWriter, respondMessage string, loggMessagge string, 
 		return
 	}
 
-	if respondMessage != "" {
-		fmt.Fprintln(w, respondMessage)
+	if respondMessage == "Skip" {
+		return
 	}
 
-	json.NewEncoder(w).Encode(model)
+	if respondMessage != "" {
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+		fmt.Fprintln(w, respondMessage)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(model)
+	}
+
 }

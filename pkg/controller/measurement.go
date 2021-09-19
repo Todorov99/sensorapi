@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Todorov99/server/pkg/global"
 	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/repository"
+	"github.com/Todorov99/server/pkg/service"
 )
 
 var measurementRepository = repository.CreateMeasurementRepository()
@@ -37,6 +39,10 @@ func (s *measurementController) Get(w http.ResponseWriter, r *http.Request) {
 
 //Post executes post request to influx 2.0 db
 func (s *measurementController) Post(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	controllerLogger.Info("Measurement POST query execution.")
 
 	err := json.NewDecoder(r.Body).Decode(&measurements)
@@ -55,16 +61,27 @@ func (s *measurementController) Post(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *measurementController) Put(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	err := measurementRepository.Update()
 	respond(w, "", "Measurement PUT query execution.", err, measurements, 501)
 }
 
 func (s *measurementController) Delete(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	measurements, err := measurementRepository.Delete("")
 	respond(w, "", "Measurement DELETE query execution.", err, measurements, 501)
 }
 
 func getSensorAverageValue(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
 	var averageValue = make(map[string]string)
 
 	urlParams := getURLQueryParams(r, "deviceId", "sensorId", "startTime", "endTime")
@@ -81,7 +98,9 @@ func getSensorAverageValue(w http.ResponseWriter, r *http.Request) {
 }
 
 func getSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
-
+	defer func() {
+		r.Body.Close()
+	}()
 	var correlationCoefficient = make(map[string]float64)
 
 	urlParams := getURLQueryParams(r, "deviceId1", "deviceId2", "sensorId1", "sensorId2", "startTime", "endTime")
@@ -90,4 +109,36 @@ func getSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
 
 	correlationCoefficient["correlationCoefficient"] = value
 	respond(w, "", "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)
+}
+
+func monitor(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+	service := service.NewMeasurementService()
+
+	keys := r.URL.Query()
+
+	response := make(chan interface{})
+	err := make(chan error)
+	done := make(chan bool)
+
+	go service.Monitor(r.Context(), keys.Get("duration"), []string{global.CpuUsageGroup, global.CpuTempGroup, global.MemoryGroup}, err, response, done)
+
+	for {
+		select {
+		case err := <-err:
+			if err != nil {
+				http.Redirect(w, r, "http://localhost:8081/static/warning.html", http.StatusMovedPermanently)
+				return
+			}
+		case <-done:
+			respond(w, "Skip", "Monitoring finished", nil, nil, http.StatusOK)
+			return
+		case rs := <-response:
+			respond(w, "", "Monitoring...", nil, rs, http.StatusOK)
+
+		}
+	}
+
 }

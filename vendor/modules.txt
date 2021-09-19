@@ -1,15 +1,28 @@
+# github.com/StackExchange/wmi v0.0.0-20210224194228-fe8f1750fd46
+github.com/StackExchange/wmi
 # github.com/Todorov99/sensorcli v0.0.0-20210906161825-956cbe8dbf97
 ## explicit
+github.com/Todorov99/sensorcli/cmd
 github.com/Todorov99/sensorcli/pkg/logger
+github.com/Todorov99/sensorcli/pkg/sensor
+github.com/Todorov99/sensorcli/pkg/util
+github.com/Todorov99/sensorcli/pkg/writer
 # github.com/deepmap/oapi-codegen v1.6.0
 github.com/deepmap/oapi-codegen/pkg/runtime
 github.com/deepmap/oapi-codegen/pkg/types
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit
 github.com/fsnotify/fsnotify
+# github.com/go-ole/go-ole v1.2.5
+github.com/go-ole/go-ole
+github.com/go-ole/go-ole/oleutil
 # github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
+# github.com/hashicorp/errwrap v1.0.0
+github.com/hashicorp/errwrap
+# github.com/hashicorp/go-multierror v1.0.0
+github.com/hashicorp/go-multierror
 # github.com/hashicorp/hcl v1.0.0
 github.com/hashicorp/hcl
 github.com/hashicorp/hcl/hcl/ast
@@ -59,6 +72,13 @@ github.com/mitchellh/mapstructure
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
+# github.com/shirou/gopsutil v3.21.6+incompatible
+github.com/shirou/gopsutil/cpu
+github.com/shirou/gopsutil/host
+github.com/shirou/gopsutil/internal/common
+github.com/shirou/gopsutil/mem
+github.com/shirou/gopsutil/net
+github.com/shirou/gopsutil/process
 # github.com/sirupsen/logrus v1.8.1
 github.com/sirupsen/logrus
 # github.com/spf13/afero v1.6.0
@@ -79,6 +99,10 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
+# github.com/tklauser/go-sysconf v0.3.6
+github.com/tklauser/go-sysconf
+# github.com/tklauser/numcpus v0.2.2
+github.com/tklauser/numcpus
 # golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 golang.org/x/net/publicsuffix
 # golang.org/x/sys v0.0.0-20210903071746-97244b99971b
