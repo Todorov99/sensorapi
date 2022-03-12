@@ -28,33 +28,33 @@ const (
 
 //InfluxDB 2.0 queries
 const (
-	GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId = `from(bucket: "my-bucket")
+	GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId = `from(bucket: "bucket")
 	|> range(start: %s, stop: %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
 	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
 	`
-	GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId = `from(bucket: "my-bucket")
+	GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId = `from(bucket: "bucket")
 	|> range(start: %s, stop: %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
 	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
 	|> mean()
 	`
 
-	GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp = `from(bucket: "my-bucket")
+	GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp = `from(bucket: "bucket")
 	|> range(start: %s, stop: %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
 	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
 	|> keep(columns: ["_value"])
 	`
 
-	CountMeasurementValues = `from(bucket: "my-bucket")
+	CountMeasurementValues = `from(bucket: "bucket")
 	|> range(start: %s, stop: %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
 	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
 	|> count()
 	`
 
-	GetAllMeasurementsFromStartTime = `from(bucket: "my-bucket")
+	GetAllMeasurementsFromStartTime = `from(bucket: "bucket")
 	|> range(start: 2021-09-04T23:30:00Z)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
 	`

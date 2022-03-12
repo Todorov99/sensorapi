@@ -21,9 +21,9 @@ var InfluxdbClient influxClient.Client
 
 //TODO property file should be implemented
 const (
-	token  = `EOrpjNFDzHgKh-9Mpimun7SaWohfSUTXRbyJGTCQCrLM8vXvR10QXMvi4VPg8JgnVp6nIyC2VVK82PMAW08EkQ==`
-	Org    = "my-org"
-	Bucket = "my-bucket"
+	token  = "testToken"
+	Org    = "org"
+	Bucket = "bucket"
 )
 
 func init() {

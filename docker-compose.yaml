@@ -1,14 +1,12 @@
 version: '3.8'
 services:
   influxdb:
-    image: todorov99/university:1.0.0
-    container_name: "test"
+    image: todorov99/influxdb:1.0.0
+    container_name: "influx-bachelor"
     ports: 
       - '8086:8086'
-    # environment:
-    #   - DOCKER_INFLUXDB_INIT_MODE=setup
-    #   - DOCKER_INFLUXDB_INIT_USERNAME=todor
-    #   - DOCKER_INFLUXDB_INIT_PASSWORD=Abcd123!
-    #   - DOCKER_INFLUXDB_INIT_ORG=org
-    #   - DOCKER_INFLUXDB_INIT_BUCKET=bucket
-    #   - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=testToken
+  postgres:
+    image: todorov99/postgredb:1.0.0
+    container_name: "postgre-bachelor"
+    ports:
+      - '5432:5432'
