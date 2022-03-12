@@ -24,6 +24,10 @@ func createMeasurementController() IController {
 	return &measurementController{}
 }
 
+func (d *measurementController) GetAll(w http.ResponseWriter, r *http.Request) {
+
+}
+
 //Get gets measurement for current device and sensor ID between concrete timestamp
 func (s *measurementController) Get(w http.ResponseWriter, r *http.Request) {
 	controllerLogger.Info("Measurement GET query execution.")

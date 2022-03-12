@@ -18,6 +18,10 @@ func createSensorController() IController {
 	return &sensorController{}
 }
 
+func (d *sensorController) GetAll(w http.ResponseWriter, r *http.Request) {
+
+}
+
 func (s *sensorController) Get(w http.ResponseWriter, r *http.Request) {
 	pathVariable := getIDFromPathVariable(r)
 	controllerLogger.Debugf("DEBUG path variable: %s", pathVariable)
