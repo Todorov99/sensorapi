@@ -7,7 +7,7 @@ import (
 
 	"github.com/Todorov99/sensorcli/pkg/util"
 	"github.com/hashicorp/go-multierror"
-	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/v3/mem"
 )
 
 const (
