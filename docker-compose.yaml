@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  influxdb:
+    image: todorov99/influxdb:1.0.0
+    container_name: "influx-bachelor"
+    ports: 
+      - '8086:8086'
+  postgres:
+    image: todorov99/postgredb:1.0.0
+    container_name: "postgre-bachelor"
+    ports:
+      - '5432:5432'

@@ -12,7 +12,9 @@ import (
 type measurementRepository struct{}
 
 func (m *measurementRepository) GetAll() (interface{}, error) {
-	return nil, nil
+	repositoryLogger.Infof("Getting metrics...")
+
+	return executeSelectQueryInflux(query.GetAllMeasurementsFromStartTime, true)
 }
 
 // GetByID gets measurements for current sensor ID and device ID

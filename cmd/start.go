@@ -16,7 +16,7 @@ limitations under the License.
 package cmd
 
 import (
-	"github.com/Todorov99/server/pkg/controller"
+	"github.com/Todorov99/server/pkg/server"
 	"github.com/spf13/cobra"
 )
 
@@ -24,13 +24,13 @@ var (
 	port string
 )
 
-// startCmd represents the start command
+// startCmd represents the start command for starting the HTTP(S) Web Server
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start http web server",
 	Long:  `Start is command line that starts a http web server`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return controller.HandleRequest(port)
+		return server.HandleRequest(port)
 	},
 }
 

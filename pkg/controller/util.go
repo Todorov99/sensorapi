@@ -1,23 +1,42 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
+	"github.com/Todorov99/sensorcli/pkg/logger"
+	"github.com/Todorov99/server/pkg/models"
 	"github.com/gorilla/mux"
 )
 
-func getIDFromPathVariable(r *http.Request) string {
-	return mux.Vars(r)["id"]
-}
+var controllerLogger = logger.NewLogrus("controller", os.Stdout)
 
-func getURLQueryParams(r *http.Request, params ...string) []string {
-	keys := r.URL.Query()
-	fmt.Println(keys)
-	if len(params) == 6 {
-		return []string{keys.Get(params[0]), keys.Get(params[1]), keys.Get(params[2]), keys.Get(params[3]),
-			keys.Get(params[4]), keys.Get(params[5])}
+func response(w http.ResponseWriter, respondMessage string, loggMessagge string, err error, model interface{}, statusCode int) {
+	controllerLogger.Info(loggMessagge)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(statusCode)
+		controllerLogger.Error(err)
+		responseError := models.ResponseError{
+			ErrMessage: err.Error(),
+			Entity:     model,
+		}
+		json.NewEncoder(w).Encode(responseError)
+		return
 	}
 
-	return []string{keys.Get(params[0]), keys.Get(params[1]), keys.Get(params[2]), keys.Get(params[3])}
+	if respondMessage != "" {
+		w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+		fmt.Fprintln(w, respondMessage)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(model)
+	}
+
+}
+
+func getIDFromPathVariable(r *http.Request) string {
+	return mux.Vars(r)["id"]
 }
