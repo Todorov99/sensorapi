@@ -2,7 +2,7 @@ package controller
 
 import "net/http"
 
-// IController represent rest queries.
+// IController represent the commont REST verbs for the sensors and measurements
 type IController interface {
 	GetAll(w http.ResponseWriter, r *http.Request)
 	Get(w http.ResponseWriter, r *http.Request)
