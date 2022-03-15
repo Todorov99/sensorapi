@@ -15,7 +15,7 @@ var postgresLogger = logger.NewLogrus("postres", os.Stdout)
 
 func init() {
 	postgresLogger.Info("Initializing postgres DB client")
-	db, err := sql.Open("postgres", "postgres://postgres:Password321@localhost/sensorCLI?sslmode=disable")
+	db, err := sql.Open("postgres", "postgres://postgres:Password321@postgredb/sensorCLI?sslmode=disable")
 	if err != nil {
 		postgresLogger.Panic(err)
 	}
