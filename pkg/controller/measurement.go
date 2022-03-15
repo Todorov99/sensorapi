@@ -145,9 +145,9 @@ func (m *MeasurementAnalizer) Monitor(w http.ResponseWriter, r *http.Request) {
 	done := make(chan bool)
 
 	sensorGroupsWithSysFiles := map[string]string{
-		global.CpuTempGroup:    "thermal",
-		global.CpuUsageGroup:   "",
-		global.MemoryAvailable: "",
+		global.CpuTempGroup:  keys.Get("tempSysFile"),
+		global.CpuUsageGroup: "",
+		global.MemoryGroup:   "",
 	}
 
 	go m.measurementService.Monitor(r.Context(), keys.Get("duration"), sensorGroupsWithSysFiles, valueCfg, err, metricChan, done)

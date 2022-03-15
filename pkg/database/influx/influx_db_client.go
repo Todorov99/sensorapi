@@ -10,7 +10,7 @@ import (
 var influxLogger = logger.NewLogrus("influx", os.Stdout)
 
 const (
-	address string = "http://localhost:8086/"
+	address string = "http://influxdb:8086/"
 	// DbName is influxdb name.
 	DbName           string = "sensorCLI"
 	username         string = "todor"
