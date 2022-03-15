@@ -3,6 +3,8 @@ package sensor
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/Todorov99/sensorcli/pkg/util"
@@ -15,9 +17,10 @@ const (
 )
 
 type cpuTempSensor struct {
-	cpuTemp  string
-	deviceID string
-	sensors  []sensor
+	cpuTemp         string
+	deviceID        string
+	sensors         []sensor
+	thermalFilePath string
 }
 
 // CreateTempSensor creates instance of temperature sensor.
@@ -25,9 +28,10 @@ func CreateTempSensor() ISensor {
 	return &cpuTempSensor{}
 }
 
+// GetSensorData gets the temperature sensor data
 func (tempS *cpuTempSensor) GetSensorData(ctx context.Context, format string) ([]Measurment, error) {
 	sensorLogger.Info("Gerring sensor data...")
-	cpuTemp, err := getTempMeasurments(ctx, format)
+	cpuTemp, err := tempS.getTempMeasurments(ctx, format)
 	if err != nil {
 		msg := "failed to get temperature measurements: %w"
 		sensorLogger.Errorf(msg, err)
@@ -37,8 +41,15 @@ func (tempS *cpuTempSensor) GetSensorData(ctx context.Context, format string) ([
 	return cpuTemp, nil
 }
 
+// ValidateFormat validates the format to which the temperature should be parsed
 func (tempS *cpuTempSensor) ValidateFormat(format string) error {
 	return util.ValidateFormat(format)
+}
+
+// SetSysInfoFile sets the sys thermal info file from where the temperature
+// could be measured in case any drivers are not installed on the sytem
+func (tempS *cpuTempSensor) SetSysInfoFile(filepath string) {
+	tempS.thermalFilePath = filepath
 }
 
 func (tempS *cpuTempSensor) ValidateUnit() error {
@@ -61,10 +72,10 @@ func (tempS *cpuTempSensor) ValidateUnit() error {
 	return err
 }
 
-func getTempMeasurments(ctx context.Context, format string) ([]Measurment, error) {
+func (tempS *cpuTempSensor) getTempMeasurments(ctx context.Context, format string, filePath ...string) ([]Measurment, error) {
 	sensorLogger.Info("Getting temperature sensor measurements...")
 
-	cpuTempInfo, err := getTempFromSensor(ctx)
+	cpuTempInfo, err := tempS.getTempFromSensor(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +96,22 @@ func getTempMeasurments(ctx context.Context, format string) ([]Measurment, error
 	return newMeasurements(cpuTempInfo), nil
 }
 
-func getTempFromSensor(ctx context.Context) (cpuTempSensor, error) {
+func (tempS *cpuTempSensor) getTempFromSensor(ctx context.Context) (cpuTempSensor, error) {
 	sensorLogger.Info("Getting temperature from sensor")
+	tempSensor := cpuTempSensor{}
+
 	sensorTeperatureInfo, err := host.SensorsTemperaturesWithContext(ctx)
 	if err != nil {
-		return cpuTempSensor{}, err
+		return tempSensor, err
+	}
+
+	if len(sensorTeperatureInfo) == 0 {
+		temp, err := readSysFile(tempS.thermalFilePath)
+		if err != nil {
+			return tempSensor, err
+		}
+		tempSensor.cpuTemp = temp
+		return tempSensor, nil
 	}
 
 	cpuTemp := sensorTeperatureInfo[0].Temperature
@@ -98,4 +120,18 @@ func getTempFromSensor(ctx context.Context) (cpuTempSensor, error) {
 	return cpuTempSensor{
 		cpuTemp: strconv.FormatFloat(cpuTemp, 'f', 1, 64),
 	}, nil
+}
+
+func readSysFile(filePath string) (string, error) {
+	absolutePath, err := filepath.Abs(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	b, err := os.ReadFile(absolutePath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
 }

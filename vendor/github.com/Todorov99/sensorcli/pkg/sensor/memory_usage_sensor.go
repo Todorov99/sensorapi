@@ -66,6 +66,9 @@ func (memoryS *cpuMemorySensor) ValidateUnit() error {
 	return err
 }
 
+func (memoryS *cpuMemorySensor) SetSysInfoFile(filepath string) {
+}
+
 func getMemoryUsageData(ctx context.Context, format string) ([]Measurment, error) {
 	sensorLogger.Info("Getting memory usage data...")
 

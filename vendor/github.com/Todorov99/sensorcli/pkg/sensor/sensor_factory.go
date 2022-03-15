@@ -18,5 +18,5 @@ func NewSensor(sensorType string) (ISensor, error) {
 		return CreateMemorySensor(), nil
 	}
 
-	return nil, fmt.Errorf("error in getting sensor type")
+	return nil, fmt.Errorf("error in getting sensor type: %q", sensorType)
 }

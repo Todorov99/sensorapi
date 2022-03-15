@@ -3,7 +3,7 @@ module github.com/Todorov99/server
 go 1.17
 
 require (
-	github.com/Todorov99/sensorcli v0.0.0-20220312150716-9a3e6f5ac5ab
+	github.com/Todorov99/sensorcli v0.0.0-20220315212340-8e4e39b11a8d
 	github.com/gorilla/mux v1.8.0
 	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040
 	github.com/lib/pq v1.10.2
@@ -40,7 +40,7 @@ require (
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
-	golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5 // indirect
+	golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/ini.v1 v1.66.4 // indirect
