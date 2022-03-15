@@ -60,6 +60,9 @@ func (usageS *cpuUsageSensor) ValidateUnit() error {
 	return err
 }
 
+func (usageS *cpuUsageSensor) SetSysInfoFile(filepath string) {
+}
+
 func getUsageMeasurements(ctx context.Context, format string) ([]Measurment, error) {
 	sensorLogger.Info("Getting usage sensor measurements...")
 

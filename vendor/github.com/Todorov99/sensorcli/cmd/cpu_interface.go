@@ -13,10 +13,10 @@ type Cpu interface {
 }
 
 type cpuSensor struct {
-	groups []string
+	groups map[string]string
 }
 
-func NewCpu(sensorGroup []string) Cpu {
+func NewCpu(sensorGroup map[string]string) Cpu {
 	return &cpuSensor{
 		groups: sensorGroup,
 	}
@@ -26,7 +26,11 @@ func (c *cpuSensor) GetMeasurements(ctx context.Context) ([]sensor.Measurment, e
 	return getMultipleSensorsMeasurements(ctx, c.groups)
 }
 
-func getSensorMeasurements(ctx context.Context, sensorGroup string) ([]sensor.Measurment, error) {
+func SetSensorGroupSysFile(filePath, sensorGroup string) {
+
+}
+
+func getSensorMeasurements(ctx context.Context, sensorGroup, sensorSysFile string) ([]sensor.Measurment, error) {
 	if sensorGroup == "" {
 		cmdLogger.Errorf("invalid sensor group")
 		return nil, fmt.Errorf("invalid sensor group")
@@ -36,6 +40,10 @@ func getSensorMeasurements(ctx context.Context, sensorGroup string) ([]sensor.Me
 	if err != nil {
 		cmdLogger.Error(err)
 		return nil, err
+	}
+
+	if sensorSysFile != "" {
+		sensorType.SetSysInfoFile(sensorSysFile)
 	}
 
 	err = sensorType.ValidateUnit()

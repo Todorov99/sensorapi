@@ -1,4 +1,4 @@
-# github.com/Todorov99/sensorcli v0.0.0-20220312150716-9a3e6f5ac5ab
+# github.com/Todorov99/sensorcli v0.0.0-20220315212340-8e4e39b11a8d
 ## explicit; go 1.17
 github.com/Todorov99/sensorcli/cmd
 github.com/Todorov99/sensorcli/pkg/logger
@@ -136,7 +136,7 @@ github.com/yusufpapurcu/wmi
 # golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d
 ## explicit; go 1.17
 golang.org/x/net/publicsuffix
-# golang.org/x/sys v0.0.0-20220310020820-b874c991c1a5
+# golang.org/x/sys v0.0.0-20220315194320-039c03cc5b86
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

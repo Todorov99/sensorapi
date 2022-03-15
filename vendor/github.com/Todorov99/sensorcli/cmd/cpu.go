@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/Todorov99/sensorcli/pkg/sensor"
@@ -88,7 +89,24 @@ func init() {
 	cpuCmd.Flags().Float64Var(&totalDuration, "total_duration", 60.0, "Terminating the whole program after specified duration")
 	cpuCmd.Flags().StringVar(&webHook, "web_hook_url", "", "Expose to current port.")
 
-	cpuCmd.Flags().StringSliceVar(&sensorGroups, "sensor_group", []string{""}, "There are three main sensor groups: CPU_TEMP, CPU_USAGE and MEMORY_USAGE.")
+	cpuCmd.Flags().StringSliceVar(&sensorGroups, "sensor_group", []string{""}, "There are three main sensor groups: CPU_TEMP, CPU_USAGE and MEMORY_USAGE. Each senosr group could have system file that will hold specific information")
+}
+
+func getSensorGroupsWithSystemFile(sensorflag []string) map[string]string {
+	sensorGroupWithSysFile := make(map[string]string)
+
+	for _, group := range sensorflag {
+		sysFile := ""
+		splitArgs := strings.Split(group, "=")
+
+		if len(splitArgs) > 1 && splitArgs[1] != "" {
+			sysFile = splitArgs[1]
+		}
+
+		sensorGroupWithSysFile[splitArgs[0]] = sysFile
+	}
+
+	return sensorGroupWithSysFile
 }
 
 func terminateForTotalDuration(ctx context.Context) error {
@@ -103,7 +121,7 @@ func terminateForTotalDuration(ctx context.Context) error {
 			return nil
 		default:
 
-			multipleSensorsData, err := getMultipleSensorsMeasurements(ctx, sensorGroups)
+			multipleSensorsData, err := getMultipleSensorsMeasurements(ctx, getSensorGroupsWithSystemFile(sensorGroups))
 			if err != nil {
 				cmdLogger.Error(err)
 				return err
@@ -118,14 +136,14 @@ func terminateForTotalDuration(ctx context.Context) error {
 
 }
 
-func getMultipleSensorsMeasurements(ctx context.Context, groups []string) ([]sensor.Measurment, error) {
+func getMultipleSensorsMeasurements(ctx context.Context, groups map[string]string) ([]sensor.Measurment, error) {
 	var multipleSensorsData []sensor.Measurment
 
-	for _, group := range groups {
+	for group, sysFile := range groups {
 
 		var currentSensorGroupData []sensor.Measurment
 
-		currentSensorGroupData, err := getSensorMeasurements(ctx, group)
+		currentSensorGroupData, err := getSensorMeasurements(ctx, group, sysFile)
 		if err != nil {
 			return nil, err
 		}

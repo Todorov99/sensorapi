@@ -14,7 +14,7 @@ import (
 )
 
 type MeasurementService interface {
-	Monitor(ctx context.Context, duration string, sensorGroup []string, valueCfg models.ValueCfg, err chan error, response chan interface{}, done chan bool)
+	Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg models.ValueCfg, err chan error, response chan interface{}, done chan bool)
 	GetSensorsCorrelationCoefficient(deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime string, endTime string) (string, error)
 	GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp models.MeasurementBetweenTimestamp) ([]models.Measurement, error)
@@ -31,7 +31,7 @@ func NewMeasurementService() MeasurementService {
 	}
 }
 
-func (m measurementService) Monitor(ctx context.Context, duration string, sensorGroup []string, valueCfg models.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
+func (m measurementService) Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg models.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
 	defer func() {
 		close(errChan)
 		close(response)
