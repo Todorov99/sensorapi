@@ -16,3 +16,9 @@ const (
 	CpuUsageGroup = "CPU_USAGE"
 	MemoryGroup   = "MEMORY_USAGE"
 )
+
+const (
+	VaultPath               = "./vault.yaml"
+	PlainVaultType          = "plain"
+	ApplicationPropertyFile = "./application_properties.yaml"
+)

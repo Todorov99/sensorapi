@@ -1,0 +1,6 @@
+- id: influxToken
+  name: token
+  value: testToken
+- id: postgreSecret
+  name: postgres
+  value: Password321

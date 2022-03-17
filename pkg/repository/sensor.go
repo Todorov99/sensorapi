@@ -1,20 +1,22 @@
 package repository
 
 import (
+	"database/sql"
 	"fmt"
 
-	"github.com/Todorov99/server/pkg/database/postgres"
 	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/repository/query"
 )
 
-type sensorRepository struct{}
+type sensorRepository struct {
+	postgreClient *sql.DB
+}
 
 func (s *sensorRepository) GetAll() (interface{}, error) {
 	repositoryLogger.Info("Getting all sensors...")
 	var sensors []models.Sensor
 
-	rowsRs, err := postgres.DatabaseConnection.Query(query.GetAllSensors)
+	rowsRs, err := s.postgreClient.Query(query.GetAllSensors)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +43,7 @@ func (s *sensorRepository) GetByID(args ...string) (interface{}, error) {
 	repositoryLogger.Debugf("Getting sensor by ID: %s", args[0])
 	var sensors []models.Sensor
 
-	rowsRs, err := postgres.DatabaseConnection.Query(query.GetAllSensorsBySensorID, args[0])
+	rowsRs, err := s.postgreClient.Query(query.GetAllSensorsBySensorID, args[0])
 	if err != nil {
 		return nil, fmt.Errorf("failed executing query %s: %w", fmt.Sprintf(query.GetAllSensorsBySensorID, args[0]), err)
 	}
@@ -66,7 +68,7 @@ func (s *sensorRepository) GetByID(args ...string) (interface{}, error) {
 
 func (s *sensorRepository) Add(args ...string) error {
 	repositoryLogger.Infof("Adding sensor with name: %s...", args[0])
-	chackForExistingSensor, err := getSensorIDByName(args[0])
+	chackForExistingSensor, err := getSensorIDByName(args[0], s.postgreClient)
 
 	if err != nil {
 		return err
@@ -76,8 +78,8 @@ func (s *sensorRepository) Add(args ...string) error {
 		return fmt.Errorf("sensor with name: %s already exists", args[0])
 	}
 
-	sensorGroupID, sensorGroupError := getSensorGroupByName(args[3])
-	sensorID, err := executeSelectQuery("SELECT max(id) + 1 from sensor")
+	sensorGroupID, sensorGroupError := getSensorGroupByName(args[3], s.postgreClient)
+	sensorID, err := executeSelectQuery("SELECT max(id) + 1 from sensor", s.postgreClient)
 
 	if err != nil {
 		return err
@@ -87,35 +89,35 @@ func (s *sensorRepository) Add(args ...string) error {
 		return sensorGroupError
 	}
 
-	return executeModifyingQuery(query.AddSensor, sensorID, args[0], args[1], args[2], sensorGroupID, args[4])
+	return executeModifyingQuery(query.AddSensor, s.postgreClient, sensorID, args[0], args[1], args[2], sensorGroupID, args[4])
 }
 
 func (s *sensorRepository) Update(args ...string) error {
 	repositoryLogger.Infof("Updating sensor with id: %s", args[4])
-	if !checkForExistingSensorByID(args[4]) {
+	if !checkForExistingSensorByID(args[4], s.postgreClient) {
 		return fmt.Errorf("sensor with id: %s does not exist", args[4])
 	}
 
-	return updateSensorsByID(args[4], args[0], args[1], args[2], args[3])
+	return updateSensorsByID(args[4], args[0], args[1], args[2], args[3], s.postgreClient)
 }
 
 func (s *sensorRepository) Delete(id string) (interface{}, error) {
 	repositoryLogger.Infof("Deleting sensot with id: %s", id)
-	if !checkForExistingSensorByID(id) {
+	if !checkForExistingSensorByID(id, s.postgreClient) {
 		return nil, fmt.Errorf("sensor with id: %s does not exist", id)
 	}
 
-	deletedSensor, err := getSensorByID(id)
+	deletedSensor, err := getSensorByID(id, s.postgreClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed deleting sensor with id: %s: err: %w", id, err)
 	}
 
-	return deletedSensor, executeModifyingQuery(query.DeleteSensor, id)
+	return deletedSensor, executeModifyingQuery(query.DeleteSensor, s.postgreClient, id)
 }
 
-func updateSensorsByID(sensorID string, name string, description string, unit string, sensorGroup string) error {
+func updateSensorsByID(sensorID string, name string, description string, unit string, sensorGroup string, postgreClient *sql.DB) error {
 
-	sensorGroupID, err := getSensorGroupByName(sensorGroup)
+	sensorGroupID, err := getSensorGroupByName(sensorGroup, postgreClient)
 
 	if sensorGroupID == "" {
 		return fmt.Errorf("invalid sensor group")
@@ -125,12 +127,12 @@ func updateSensorsByID(sensorID string, name string, description string, unit st
 		return err
 	}
 
-	return executeModifyingQuery(query.UpdateSensor, name, description, sensorGroupID, unit, sensorID)
+	return executeModifyingQuery(query.UpdateSensor, postgreClient, name, description, sensorGroupID, unit, sensorID)
 }
 
-func getSensorIDByName(name string) (string, error) {
+func getSensorIDByName(name string, postgreClient *sql.DB) (string, error) {
 
-	sensorID, err := executeSelectQuery(query.GetSensorByName, name)
+	sensorID, err := executeSelectQuery(query.GetSensorByName, postgreClient, name)
 
 	if err != nil {
 		return "", err
@@ -139,19 +141,19 @@ func getSensorIDByName(name string) (string, error) {
 	return sensorID, nil
 }
 
-func getSensorGroupByName(sensorGroup string) (string, error) {
-	return executeSelectQuery(query.GetSensorIDByGroupName, sensorGroup)
+func getSensorGroupByName(sensorGroup string, postgreClient *sql.DB) (string, error) {
+	return executeSelectQuery(query.GetSensorIDByGroupName, postgreClient, sensorGroup)
 }
 
-func checkForExistingSensorsByDeviceID(deviceID string) bool {
-	sensor, _ := executeSelectQuery(query.GetSensorIDByDeviceID, deviceID)
+func checkForExistingSensorsByDeviceID(deviceID string, postgreClient *sql.DB) bool {
+	sensor, _ := executeSelectQuery(query.GetSensorIDByDeviceID, postgreClient, deviceID)
 	return sensor != ""
 }
 
-func getSensorByID(sensorID string) (models.Sensor, error) {
+func getSensorByID(sensorID string, posgreClient *sql.DB) (models.Sensor, error) {
 	var sensor models.Sensor
 
-	rowsRs, err := postgres.DatabaseConnection.Query(query.GetSensorByID, sensorID)
+	rowsRs, err := posgreClient.Query(query.GetSensorByID, sensorID)
 
 	if err != nil {
 		return sensor, err
@@ -173,10 +175,10 @@ func getSensorByID(sensorID string) (models.Sensor, error) {
 	return sensor, nil
 }
 
-func getSensorByDeviceID(deviceID string) ([]models.Sensor, error) {
+func getSensorByDeviceID(deviceID string, posgreClient *sql.DB) ([]models.Sensor, error) {
 	var sensors []models.Sensor
 
-	rowsRs, err := postgres.DatabaseConnection.Query(query.GetAllSensorsByDeviceID, deviceID)
+	rowsRs, err := posgreClient.Query(query.GetAllSensorsByDeviceID, deviceID)
 
 	if err != nil {
 		return nil, err

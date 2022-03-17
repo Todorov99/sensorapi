@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Todorov99/server/pkg/database/influx"
 	"github.com/Todorov99/server/pkg/models"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -34,12 +33,12 @@ func createPoint(data models.Measurement) (*write.Point, error) {
 	return point, nil
 }
 
-func writePointToBatch(measurementData models.Measurement) {
+func writePointToBatch(measurementData models.Measurement, influxClient influxdb2.Client, org, bucket string) {
 	defer func() {
-		influx.InfluxdbClient.Close()
+		influxClient.Close()
 	}()
 
-	writeAPI := influx.InfluxdbClient.WriteAPIBlocking(influx.Org, influx.Bucket)
+	writeAPI := influxClient.WriteAPIBlocking(org, bucket)
 
 	influxDbPoint, err := createPoint(measurementData)
 	if err != nil {
@@ -53,10 +52,10 @@ func writePointToBatch(measurementData models.Measurement) {
 
 }
 
-func executeSelectQueryInflux(querry string, isType bool) ([]interface{}, error) {
+func executeSelectQueryInflux(querry string, isType bool, influxClient influxdb2.Client, org, bucket string) ([]interface{}, error) {
 	var measurement []interface{}
 
-	queryAPI := influx.InfluxdbClient.QueryAPI(influx.Org)
+	queryAPI := influxClient.QueryAPI(org)
 
 	queryResult, err := queryAPI.Query(context.Background(), querry)
 	if err != nil {
