@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/mitchellh/mapstructure"
 )
@@ -35,7 +35,7 @@ func (s *sensorService) GetById(senosorID string) (interface{}, error) {
 }
 
 func (s *sensorService) Add(model interface{}) error {
-	sensor := models.Sensor{}
+	sensor := dto.Sensor{}
 	err := mapstructure.Decode(model, &sensor)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (s *sensorService) Add(model interface{}) error {
 }
 
 func (s *sensorService) Update(model interface{}) error {
-	sensor := models.Sensor{}
+	sensor := dto.Sensor{}
 	err := mapstructure.Decode(model, &sensor)
 	if err != nil {
 		return err

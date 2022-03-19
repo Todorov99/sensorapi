@@ -7,18 +7,18 @@ import (
 
 	sensorcmd "github.com/Todorov99/sensorcli/cmd"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/global"
-	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/mitchellh/mapstructure"
 )
 
 type MeasurementService interface {
-	Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg models.ValueCfg, err chan error, response chan interface{}, done chan bool)
+	Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, err chan error, response chan interface{}, done chan bool)
 	GetSensorsCorrelationCoefficient(deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime string, endTime string) (string, error)
-	GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp models.MeasurementBetweenTimestamp) ([]models.Measurement, error)
-	AddMeasurements(measurement models.Measurement) error
+	GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
+	AddMeasurements(measurement dto.Measurement) error
 }
 
 type measurementService struct {
@@ -31,7 +31,7 @@ func NewMeasurementService() MeasurementService {
 	}
 }
 
-func (m measurementService) Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg models.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
+func (m measurementService) Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
 	defer func() {
 		close(errChan)
 		close(response)
@@ -94,12 +94,12 @@ func (m measurementService) GetAverageValueOfMeasurements(deviceID string, senso
 	return averageValue, nil
 }
 
-func (m measurementService) GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp models.MeasurementBetweenTimestamp) ([]models.Measurement, error) {
+func (m measurementService) GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error) {
 	timestampMeasurements, err := m.repository.GetByID(measurementsBetweeTimestamp.StartTime, measurementsBetweeTimestamp.EndTime, measurementsBetweeTimestamp.DeviceID, measurementsBetweeTimestamp.SensorID)
 	if err != nil {
 		return nil, err
 	}
-	measurements := []models.Measurement{}
+	measurements := []dto.Measurement{}
 
 	err = mapstructure.Decode(timestampMeasurements, &measurements)
 	if err != nil {
@@ -112,12 +112,12 @@ func (m measurementService) GetMeasurementsBetweenTimestamp(measurementsBetweeTi
 	return measurements, nil
 }
 
-func (m measurementService) AddMeasurements(measurement models.Measurement) error {
+func (m measurementService) AddMeasurements(measurement dto.Measurement) error {
 	return m.repository.Add(measurement.MeasuredAt, measurement.Value,
 		measurement.SensorID, measurement.DeviceID)
 }
 
-func (m measurementService) scanMetrics(metrics []sensor.Measurment, valueCfg models.ValueCfg, addToDb bool) (interface{}, error) {
+func (m measurementService) scanMetrics(metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) (interface{}, error) {
 	for _, metr := range metrics {
 		if addToDb {
 			err := m.repository.Add(metr.MeasuredAt.Format(time.RFC3339), metr.Value, metr.SensorID, metr.DeviceID)

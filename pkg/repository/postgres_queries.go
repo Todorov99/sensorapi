@@ -3,30 +3,77 @@ package repository
 import (
 	"database/sql"
 	"fmt"
+	"reflect"
 
 	"github.com/Todorov99/server/pkg/repository/query"
+	"github.com/mitchellh/mapstructure"
 )
 
-func executeSelectQuery(query string, postgreClient *sql.DB, args ...interface{}) (string, error) {
-
-	var value string
+func executeSelectQuery(query string, postgreClient *sql.DB, entity interface{}, args ...interface{}) error {
+	var objects []map[string]interface{}
 
 	rowsRs, err := postgreClient.Query(query, args...)
+	//TODO make proper check
+	if rowsRs == nil {
+		return nil
+	}
+
+	columns, cerr := rowsRs.ColumnTypes()
+	if cerr != nil {
+		return cerr
+	}
 
 	for rowsRs.Next() {
 
-		err := rowsRs.Scan(&value)
+		if len(columns) != 1 {
+			// Scan needs an array of pointers to the values it is setting
+			// This creates the object and sets the values correctly
+			vals := make([]interface{}, len(columns))
+			object := map[string]interface{}{}
+			for i, column := range columns {
+				object[column.Name()] = reflect.New(column.ScanType()).Interface()
+				vals[i] = object[column.Name()]
+			}
 
-		if err != nil {
-			return "", err
+			err = rowsRs.Scan(vals...)
+			if err != nil {
+				return err
+			}
+			objects = append(objects, object)
+		} else {
+			err = rowsRs.Scan(entity)
+			if err != nil {
+				return err
+			}
 		}
+
 	}
 
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return value, nil
+	if len(columns) != 1 {
+
+		switch reflect.Indirect(reflect.ValueOf(entity)).Kind() {
+		case reflect.Slice:
+			err = mapstructure.Decode(objects, entity)
+			if err != nil {
+				return err
+			}
+		case reflect.Struct:
+			err = mapstructure.Decode(objects[0], entity)
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unsupported type")
+
+		}
+
+	}
+
+	return nil
 }
 
 func executeModifyingQuery(query string, postgreClient *sql.DB, args ...interface{}) error {
@@ -39,13 +86,16 @@ func executeModifyingQuery(query string, postgreClient *sql.DB, args ...interfac
 }
 
 func checkForExistingSensorByID(id string, postgreClient *sql.DB) bool {
-	existingSensor, _ := executeSelectQuery(query.GetSensorNameByID, postgreClient, id)
-	return existingSensor != ""
+	var existingSensor int64
+	_ = executeSelectQuery(query.GetSensorNameByID, postgreClient, &existingSensor, id)
+
+	return existingSensor == 0
 }
 
 func checkForExistingDeviceByID(id string, postgreClient *sql.DB) bool {
-	existingDevice, _ := executeSelectQuery(query.GetDeviceNameByID, postgreClient, id)
-	return existingDevice != ""
+	var existingDevice int64
+	_ = executeSelectQuery(query.GetDeviceNameByID, postgreClient, &existingDevice, id)
+	return existingDevice == 0
 }
 
 func checkForExistingDevicesAndSensors(deviceID string, sensorID string, postgreClient *sql.DB) error {

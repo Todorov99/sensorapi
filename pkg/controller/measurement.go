@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/global"
-	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/service"
 )
 
 var (
-	measurements                = models.Measurement{}
-	measurementsBetweeTimestamp = models.MeasurementBetweenTimestamp{}
+	measurements                = dto.Measurement{}
+	measurementsBetweeTimestamp = dto.MeasurementBetweenTimestamp{}
 )
 
 type measurementController struct {
@@ -133,7 +133,7 @@ func (m *MeasurementAnalizer) Monitor(w http.ResponseWriter, r *http.Request) {
 
 	keys := r.URL.Query()
 
-	valueCfg := models.ValueCfg{}
+	valueCfg := dto.ValueCfg{}
 	decodeErr := json.NewDecoder(r.Body).Decode(&valueCfg)
 	if decodeErr != nil {
 		controllerLogger.Error(decodeErr)

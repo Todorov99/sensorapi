@@ -1,4 +1,4 @@
-package models
+package dto
 
 type ResponseError struct {
 	ErrMessage string      `json:"error,omitempty"`

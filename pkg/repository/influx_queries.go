@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api/write"
 )
 
-func createPoint(data models.Measurement) (*write.Point, error) {
+func createPoint(data dto.Measurement) (*write.Point, error) {
 	_, err := time.Parse(time.RFC3339, data.MeasuredAt)
 	if err != nil {
 		return nil, err
@@ -33,7 +33,7 @@ func createPoint(data models.Measurement) (*write.Point, error) {
 	return point, nil
 }
 
-func writePointToBatch(measurementData models.Measurement, influxClient influxdb2.Client, org, bucket string) {
+func writePointToBatch(measurementData dto.Measurement, influxClient influxdb2.Client, org, bucket string) {
 	defer func() {
 		influxClient.Close()
 	}()
@@ -66,7 +66,7 @@ func executeSelectQueryInflux(querry string, isType bool, influxClient influxdb2
 		if !isType {
 			measurement = append(measurement, queryResult.Record().ValueByKey("_value"))
 		} else {
-			measurement = append(measurement, models.Measurement{
+			measurement = append(measurement, dto.Measurement{
 				MeasuredAt: queryResult.Record().Time().String(),
 				Value:      strconv.FormatFloat(queryResult.Record().ValueByKey("_value").(float64), 'f', -1, 64),
 				SensorID:   queryResult.Record().ValueByKey("sensorID").(string),

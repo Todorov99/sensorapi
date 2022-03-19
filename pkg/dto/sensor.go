@@ -1,4 +1,4 @@
-package models
+package dto
 
 // Sensor model
 type Sensor struct {

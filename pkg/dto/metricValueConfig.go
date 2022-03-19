@@ -1,4 +1,4 @@
-package models
+package dto
 
 type ValueCfg struct {
 	TempMax         string `json:"tempMaxValue,omitempty"`

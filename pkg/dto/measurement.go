@@ -1,4 +1,4 @@
-package models
+package dto
 
 //Measurement model
 type Measurement struct {

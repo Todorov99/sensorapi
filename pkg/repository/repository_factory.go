@@ -32,3 +32,10 @@ func CreateDeviceRepository() Repository {
 		postgreClient: database.GetDatabaseCfg().GetPostgreClient(),
 	}
 }
+
+// CreateDeviceRepository creates user repository.
+func CreateUserRepository() Repository {
+	return &userRepository{
+		postgreClient: database.GetDatabaseCfg().GetPostgreClient(),
+	}
+}

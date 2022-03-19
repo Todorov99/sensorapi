@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Todorov99/server/pkg/database"
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/repository/query"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
@@ -62,7 +62,7 @@ func (m *measurementRepository) Add(args ...string) error {
 		return fmt.Errorf("invalid timestamp")
 	}
 
-	addMeasurementBindingModel := models.Measurement{
+	addMeasurementBindingModel := dto.Measurement{
 		MeasuredAt: args[0],
 		Value:      args[1],
 		SensorID:   args[2],
@@ -96,7 +96,7 @@ func GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime s
 		return "", err
 	}
 
-	return response[0].(models.Measurement).Value, nil
+	return response[0].(dto.Measurement).Value, nil
 }
 
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.

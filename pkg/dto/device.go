@@ -1,4 +1,4 @@
-package models
+package dto
 
 // Device model
 type Device struct {

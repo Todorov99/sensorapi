@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/repository/query"
 )
 
@@ -24,8 +24,8 @@ func (d *deviceRepository) GetAll() (interface{}, error) {
 
 func (d *deviceRepository) GetByID(args ...string) (interface{}, error) {
 
-	var devices []models.Device
-	deviceSensors := []models.Sensor{}
+	var devices []dto.Device
+	deviceSensors := []dto.Sensor{}
 
 	rowsRs, err := d.postgreClient.Query(query.GetAllDevices)
 
@@ -39,7 +39,7 @@ func (d *deviceRepository) GetByID(args ...string) (interface{}, error) {
 
 	for rowsRs.Next() {
 
-		currentDevice := models.Device{}
+		currentDevice := dto.Device{}
 
 		err := rowsRs.Scan(&currentDevice.ID, &currentDevice.Name, &currentDevice.Description)
 		if err != nil {
@@ -72,10 +72,11 @@ func (d *deviceRepository) GetByID(args ...string) (interface{}, error) {
 
 func (d *deviceRepository) Add(args ...string) error {
 	repositoryLogger.Info("Adding device...")
-	deviceID, err := executeSelectQuery(query.GetHighestDeviceID, d.postgreClient)
-	if err != nil {
-		return err
-	}
+	// var deviceID int64
+	// err := executeSelectQuery(query.GetHighestDeviceID, d.postgreClient, &deviceID)
+	// if err != nil {
+	// 	return err
+	// }
 
 	checkForExistingDevice, err := getDeviceIDByName(args[0], d.postgreClient)
 	if err != nil {
@@ -86,7 +87,7 @@ func (d *deviceRepository) Add(args ...string) error {
 		return fmt.Errorf("device with name: %q already exists", args[0])
 	}
 
-	return executeModifyingQuery(query.InsertDevice, d.postgreClient, deviceID, args[0], args[1])
+	return executeModifyingQuery(query.InsertDevice, d.postgreClient, args[0], args[1])
 }
 
 func (d *deviceRepository) Update(args ...string) error {
@@ -120,10 +121,14 @@ func (d *deviceRepository) Delete(id string) (interface{}, error) {
 
 func getDeviceIDByName(deviceName string, postgreClient *sql.DB) (string, error) {
 	repositoryLogger.Infof("Getting device ID by name: %q", deviceName)
-	id, err := executeSelectQuery(query.GetDeviceIDByName, postgreClient, deviceName)
+	id := ""
+	err := executeSelectQuery(query.GetDeviceIDByName, postgreClient, &id, deviceName)
 	if err != nil {
 		return "", fmt.Errorf("failed getting device with name: %q", deviceName)
 	}
 
+	// if id != nil {
+	// 	return id.(string), nil
+	// }
 	return id, nil
 }

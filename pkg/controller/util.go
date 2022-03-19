@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/Todorov99/sensorcli/pkg/logger"
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/gorilla/mux"
 )
 
@@ -19,7 +19,7 @@ func response(w http.ResponseWriter, respondMessage string, loggMessagge string,
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
 		controllerLogger.Error(err)
-		responseError := models.ResponseError{
+		responseError := dto.ResponseError{
 			ErrMessage: err.Error(),
 			Entity:     model,
 		}

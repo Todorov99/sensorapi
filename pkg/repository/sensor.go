@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/repository/query"
 )
 
@@ -14,7 +14,7 @@ type sensorRepository struct {
 
 func (s *sensorRepository) GetAll() (interface{}, error) {
 	repositoryLogger.Info("Getting all sensors...")
-	var sensors []models.Sensor
+	var sensors []dto.Sensor
 
 	rowsRs, err := s.postgreClient.Query(query.GetAllSensors)
 	if err != nil {
@@ -25,7 +25,7 @@ func (s *sensorRepository) GetAll() (interface{}, error) {
 
 	for rowsRs.Next() {
 
-		currentSensor := models.Sensor{}
+		currentSensor := dto.Sensor{}
 
 		err := rowsRs.Scan(&currentSensor.ID, &currentSensor.Name, &currentSensor.Description,
 			&currentSensor.Unit, &currentSensor.SensorGroups)
@@ -41,7 +41,7 @@ func (s *sensorRepository) GetAll() (interface{}, error) {
 
 func (s *sensorRepository) GetByID(args ...string) (interface{}, error) {
 	repositoryLogger.Debugf("Getting sensor by ID: %s", args[0])
-	var sensors []models.Sensor
+	var sensors []dto.Sensor
 
 	rowsRs, err := s.postgreClient.Query(query.GetAllSensorsBySensorID, args[0])
 	if err != nil {
@@ -52,7 +52,7 @@ func (s *sensorRepository) GetByID(args ...string) (interface{}, error) {
 
 	for rowsRs.Next() {
 
-		currentSensor := models.Sensor{}
+		currentSensor := dto.Sensor{}
 
 		err := rowsRs.Scan(&currentSensor.ID, &currentSensor.Name, &currentSensor.Description,
 			&currentSensor.Unit, &currentSensor.SensorGroups)
@@ -69,7 +69,6 @@ func (s *sensorRepository) GetByID(args ...string) (interface{}, error) {
 func (s *sensorRepository) Add(args ...string) error {
 	repositoryLogger.Infof("Adding sensor with name: %s...", args[0])
 	chackForExistingSensor, err := getSensorIDByName(args[0], s.postgreClient)
-
 	if err != nil {
 		return err
 	}
@@ -78,18 +77,13 @@ func (s *sensorRepository) Add(args ...string) error {
 		return fmt.Errorf("sensor with name: %s already exists", args[0])
 	}
 
-	sensorGroupID, sensorGroupError := getSensorGroupByName(args[3], s.postgreClient)
-	sensorID, err := executeSelectQuery("SELECT max(id) + 1 from sensor", s.postgreClient)
-
+	sensorGroupID, err := getSensorGroupByName(args[3], s.postgreClient)
 	if err != nil {
 		return err
 	}
 
-	if sensorGroupError != nil {
-		return sensorGroupError
-	}
-
-	return executeModifyingQuery(query.AddSensor, s.postgreClient, sensorID, args[0], args[1], args[2], sensorGroupID, args[4])
+	fmt.Println(sensorGroupID)
+	return executeModifyingQuery(query.AddSensor, s.postgreClient, args[0], args[1], args[2], sensorGroupID, args[4])
 }
 
 func (s *sensorRepository) Update(args ...string) error {
@@ -131,9 +125,8 @@ func updateSensorsByID(sensorID string, name string, description string, unit st
 }
 
 func getSensorIDByName(name string, postgreClient *sql.DB) (string, error) {
-
-	sensorID, err := executeSelectQuery(query.GetSensorByName, postgreClient, name)
-
+	sensorID := ""
+	err := executeSelectQuery(query.GetSensorByName, postgreClient, &sensorID, name)
 	if err != nil {
 		return "", err
 	}
@@ -142,16 +135,23 @@ func getSensorIDByName(name string, postgreClient *sql.DB) (string, error) {
 }
 
 func getSensorGroupByName(sensorGroup string, postgreClient *sql.DB) (string, error) {
-	return executeSelectQuery(query.GetSensorIDByGroupName, postgreClient, sensorGroup)
+	sensorGroupID := ""
+	err := executeSelectQuery(query.GetSensorIDByGroupName, postgreClient, &sensorGroupID, sensorGroup)
+	if err != nil {
+		return "", err
+	}
+
+	return sensorGroupID, nil
 }
 
 func checkForExistingSensorsByDeviceID(deviceID string, postgreClient *sql.DB) bool {
-	sensor, _ := executeSelectQuery(query.GetSensorIDByDeviceID, postgreClient, deviceID)
+	sensor := ""
+	_ = executeSelectQuery(query.GetSensorIDByDeviceID, postgreClient, &sensor, deviceID)
 	return sensor != ""
 }
 
-func getSensorByID(sensorID string, posgreClient *sql.DB) (models.Sensor, error) {
-	var sensor models.Sensor
+func getSensorByID(sensorID string, posgreClient *sql.DB) (dto.Sensor, error) {
+	var sensor dto.Sensor
 
 	rowsRs, err := posgreClient.Query(query.GetSensorByID, sensorID)
 
@@ -175,8 +175,8 @@ func getSensorByID(sensorID string, posgreClient *sql.DB) (models.Sensor, error)
 	return sensor, nil
 }
 
-func getSensorByDeviceID(deviceID string, posgreClient *sql.DB) ([]models.Sensor, error) {
-	var sensors []models.Sensor
+func getSensorByDeviceID(deviceID string, posgreClient *sql.DB) ([]dto.Sensor, error) {
+	var sensors []dto.Sensor
 
 	rowsRs, err := posgreClient.Query(query.GetAllSensorsByDeviceID, deviceID)
 
@@ -188,7 +188,7 @@ func getSensorByDeviceID(deviceID string, posgreClient *sql.DB) ([]models.Sensor
 
 	for rowsRs.Next() {
 
-		currentSensor := models.Sensor{}
+		currentSensor := dto.Sensor{}
 
 		err := rowsRs.Scan(&currentSensor.ID, &currentSensor.Name, &currentSensor.Description,
 			&currentSensor.Unit, &currentSensor.SensorGroups)

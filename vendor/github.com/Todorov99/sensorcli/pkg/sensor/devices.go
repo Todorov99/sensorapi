@@ -2,7 +2,7 @@ package sensor
 
 import "fmt"
 
-// Diveces models
+// Diveces dto
 type Diveces struct {
 	Devices []Device `json:"devices" yaml:"devices"`
 }

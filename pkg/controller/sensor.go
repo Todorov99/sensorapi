@@ -4,11 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/service"
 )
 
-var sensor = models.Sensor{}
+var sensor = dto.Sensor{}
 
 type sensorController struct {
 	sensorService service.IService

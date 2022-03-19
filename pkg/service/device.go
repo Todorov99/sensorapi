@@ -1,7 +1,7 @@
 package service
 
 import (
-	"github.com/Todorov99/server/pkg/models"
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/mitchellh/mapstructure"
 )
@@ -25,7 +25,7 @@ func (d *deviceService) GetById(deviceID string) (interface{}, error) {
 }
 
 func (d *deviceService) Add(model interface{}) error {
-	device := models.Device{}
+	device := dto.Device{}
 	err := mapstructure.Decode(model, &device)
 	if err != nil {
 		return err
@@ -34,7 +34,7 @@ func (d *deviceService) Add(model interface{}) error {
 }
 
 func (d *deviceService) Update(model interface{}) error {
-	device := models.Device{}
+	device := dto.Device{}
 	err := mapstructure.Decode(model, &device)
 	if err != nil {
 		return err
