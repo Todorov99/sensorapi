@@ -2,9 +2,13 @@ package vault
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/Todorov99/server/pkg/global"
 )
+
+var vaultLogger = logger.NewLogrus("config", os.Stdout)
 
 type Vault interface {
 	// Get gets a secret from the vault by provided secret ID

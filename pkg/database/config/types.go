@@ -1,14 +1,5 @@
 package config
 
-// import (
-// 	_ "github.com/lib/pq"
-// )
-
-// type DatabaseClients struct {
-// 	InfluxDbClient influxdb2.Client
-// 	PostreDbClient *sql.DB
-// }
-
 type ApplicationProperties struct {
 	InfluxProps  InfluxProperties  `yaml:"influxdb,omitempty"`
 	PostgreProps PostgreProperties `yaml:"postgresdb,omitempty"`

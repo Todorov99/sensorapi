@@ -23,7 +23,7 @@ type DatabaseCfg struct {
 }
 
 func NewDatabaseClients(propsFile string) (*DatabaseCfg, error) {
-	configLogger.Info("Getting databaseClients...")
+	configLogger.Debug("Getting databaseClients...")
 
 	applicationProperties, err := loadApplicationProperties(propsFile)
 	if err != nil {
@@ -35,7 +35,7 @@ func NewDatabaseClients(propsFile string) (*DatabaseCfg, error) {
 		return nil, err
 	}
 
-	configLogger.Info("Initializing influx db 2.0 client")
+	configLogger.Debug("Initializing influx db 2.0 client")
 	influxAddress := fmt.Sprintf("http://%s:%s/", applicationProperties.InfluxProps.ServiceName, applicationProperties.InfluxProps.Port)
 	tokenSecret, err := vault.Get(applicationProperties.InfluxProps.TokenSecret)
 	if err != nil {
@@ -44,7 +44,7 @@ func NewDatabaseClients(propsFile string) (*DatabaseCfg, error) {
 
 	influxdbClient := influxdb2.NewClient(influxAddress, tokenSecret.Value)
 
-	configLogger.Info("Initializing postgres DB client")
+	configLogger.Debug("Initializing postgres DB client")
 	postgreSecret, err := vault.Get(applicationProperties.PostgreProps.PasswordSecret)
 	if err != nil {
 		return nil, err
@@ -62,6 +62,7 @@ func NewDatabaseClients(propsFile string) (*DatabaseCfg, error) {
 		return nil, err
 	}
 
+	configLogger.Debug("Database clients successfully initialized")
 	return &DatabaseCfg{
 		influxDbClient: influxdbClient,
 		influxOrg:      applicationProperties.InfluxProps.Org,
@@ -88,12 +89,12 @@ func (d *DatabaseCfg) GetInfluxBucket() string {
 
 func loadApplicationProperties(propsFile string) (*ApplicationProperties, error) {
 	appPropersties := &ApplicationProperties{}
-
 	absoluteFilePath, err := filepath.Abs(propsFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed getting absolute path form: %q", propsFile)
 	}
 
+	configLogger.Debugf("Loading property file: %q...", absoluteFilePath)
 	b, err := os.ReadFile(absoluteFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed reading config file from: %q", absoluteFilePath)
@@ -103,6 +104,6 @@ func loadApplicationProperties(propsFile string) (*ApplicationProperties, error)
 	if err != nil {
 		return nil, err
 	}
-
+	configLogger.Debug("Property file successfully loaded")
 	return appPropersties, nil
 }

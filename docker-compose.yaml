@@ -11,7 +11,7 @@ services:
     ports:
       - '5432:5432'
   server:
-    image: todorov99/server:1.0.0
+    image: todorov99/server:1.0.1
     container_name: "server-bachelor"
     depends_on:
       - 'influxdb'

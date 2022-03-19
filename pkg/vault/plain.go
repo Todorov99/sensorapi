@@ -23,6 +23,7 @@ func newPlainVault() Vault {
 // Get gets a secret from the vault. If the provided secret ID
 // does not exist in the vault an error is returned
 func (p *plain) Get(secretID string) (Secret, error) {
+	vaultLogger.Debugf("Retrieving secret from the vault with ID: %q...", secretID)
 	secrets, err := p.read()
 	if err != nil {
 		return Secret{}, err
@@ -35,10 +36,13 @@ func (p *plain) Get(secretID string) (Secret, error) {
 		return Secret{}, fmt.Errorf("secret with ID: %q does not exist in the vault", secretID)
 	}
 
+	vaultLogger.Debugf("Secret: %q successfully retrieved", secretID)
 	return secret, nil
 }
 
 func (p *plain) read() (map[string]Secret, error) {
+	vaultLogger.Debugf("Reading from: %q...", p.vaultPath)
+
 	p.mx.RLock()
 	defer p.mx.RUnlock()
 	secrets := map[string]Secret{}
@@ -57,6 +61,6 @@ func (p *plain) read() (map[string]Secret, error) {
 	for _, s := range vaultSecrets {
 		secrets[s.ID] = s
 	}
-
+	vaultLogger.Debug("Vault file successfully retrieved...")
 	return secrets, nil
 }
