@@ -1,0 +1,16 @@
+influxdb:
+  databaseName: sensorCLI
+  # The token is retrieved from vault
+  tokenSecret: influxToken
+  serviceName: influxdb
+  org: org
+  bucket: bucket
+  port: "8086"
+postgresdb:
+  databaseName: sensorCLI
+  # The secret is retrieved from vault
+  passwordSecret: postgreSecret
+  serviceName: postgredb
+  sslmode: disable
+  port: "5432"
+vaultType: plain
