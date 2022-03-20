@@ -13,6 +13,8 @@ var vaultLogger = logger.NewLogrus("config", os.Stdout)
 type Vault interface {
 	// Get gets a secret from the vault by provided secret ID
 	Get(secretID string) (Secret, error)
+	// Store stors secret in the vault
+	Store(secret Secret) error
 }
 
 type Secret struct {

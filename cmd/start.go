@@ -16,8 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	_ "github.com/Todorov99/server/pkg/database"
 	"github.com/Todorov99/server/pkg/server"
+	_ "github.com/Todorov99/server/pkg/server/config"
 	"github.com/spf13/cobra"
 )
 

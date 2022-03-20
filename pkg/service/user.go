@@ -2,18 +2,14 @@ package service
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/entity"
 	"github.com/Todorov99/server/pkg/repository"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/Todorov99/server/pkg/server/config"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/bcrypt"
 )
-
-//TODO get from .env file
-var MySigningKey = []byte("unicorns")
 
 type UserService interface {
 	Register(registerDto dto.Register) error
@@ -55,7 +51,8 @@ func (u *userService) Login(loginDto dto.Login) (string, error) {
 		return "", fmt.Errorf("invalid password: %w", err)
 	}
 
-	token, err := generateJWT(userEntity.ID)
+	jwtCfg := config.GetJWTCfg()
+	token, err := jwtCfg.GenerateJWT(userEntity)
 	if err != nil {
 		return "", err
 	}
@@ -69,21 +66,4 @@ func getHash(pwd []byte) (string, error) {
 		return "", err
 	}
 	return string(passHash), nil
-}
-
-func generateJWT(userID int64) (string, error) {
-	token := jwt.New(jwt.SigningMethodHS256)
-
-	claims := token.Claims.(jwt.MapClaims)
-
-	claims["authorized"] = true
-	claims["user_id"] = userID
-	claims["exp"] = time.Now().Add(time.Minute * 1).Unix()
-
-	tokenString, err := token.SignedString(MySigningKey)
-	if err != nil {
-		return "", fmt.Errorf("something Went Wrong: %w", err)
-	}
-
-	return tokenString, nil
 }

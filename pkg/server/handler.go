@@ -9,7 +9,7 @@ import (
 
 	"github.com/Todorov99/server/pkg/controller"
 	"github.com/Todorov99/server/pkg/dto"
-	"github.com/Todorov99/server/pkg/service"
+	"github.com/Todorov99/server/pkg/server/config"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
@@ -63,11 +63,23 @@ func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handle
 		}
 
 		t := strings.Split(bareerToken, " ")[1]
+
 		token, err := jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, errors.New("invalid signing method")
 			}
-			return service.MySigningKey, nil
+
+			jwtCfg := config.GetJWTCfg()
+			tokenClaims := token.Claims.(jwt.MapClaims)
+			if !tokenClaims.VerifyAudience(jwtCfg.GetJWTAudience(), false) {
+				return nil, errors.New("invalid aud of the JWT")
+			}
+
+			if !tokenClaims.VerifyIssuer(jwtCfg.GetJWTIssuer(), false) {
+				return nil, errors.New("invalid iss of the JWT")
+			}
+
+			return jwtCfg.GetJWTSigningKey(), nil
 		})
 
 		if err != nil {

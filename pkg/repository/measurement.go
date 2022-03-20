@@ -6,9 +6,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/Todorov99/server/pkg/database"
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/repository/query"
+	"github.com/Todorov99/server/pkg/server/config"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
 
@@ -84,14 +84,14 @@ func (m *measurementRepository) Delete(name string) (interface{}, error) {
 // GetAverageValueOfMeasurements gets average values between two timestamps.
 func GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime string, endTime string) (string, error) {
 	repositoryLogger.Infof("Getting average value of measurements between %s - %s", startTime, endTime)
-	err := checkForExistingDevicesAndSensors(deviceID, sensorID, database.GetDatabaseCfg().GetPostgreClient())
+	err := checkForExistingDevicesAndSensors(deviceID, sensorID, config.GetDatabaseCfg().GetPostgreClient())
 	if err != nil {
 		return "", err
 	}
 
 	influxQuery := fmt.Sprintf(query.GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId, startTime, endTime, deviceID, sensorID)
 
-	response, err := executeSelectQueryInflux(influxQuery, true, database.GetDatabaseCfg().GetInfluxClient(), database.GetDatabaseCfg().GetInfluxOrg(), database.GetDatabaseCfg().GetInfluxBucket())
+	response, err := executeSelectQueryInflux(influxQuery, true, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
 	if err != nil {
 		return "", err
 	}
@@ -102,25 +102,25 @@ func GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime s
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
 func GetSensorsCorrelationCoefficient(deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error) {
 	repositoryLogger.Info("Getting correlation coficient...")
-	err := checkForExistingDevicesAndSensors(deviceID1, sensorID1, database.GetDatabaseCfg().GetPostgreClient())
+	err := checkForExistingDevicesAndSensors(deviceID1, sensorID1, config.GetDatabaseCfg().GetPostgreClient())
 	if err != nil {
 		return 0, err
 	}
 
 	repositoryLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID1, sensorID1)
-	firstSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID1, sensorID1), false, database.GetDatabaseCfg().GetInfluxClient(), database.GetDatabaseCfg().GetInfluxOrg(), database.GetDatabaseCfg().GetInfluxBucket())
+	firstSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID1, sensorID1), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
 	if err != nil {
 		return 0, err
 	}
 
 	repositoryLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID2, sensorID2)
-	secondSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID2, sensorID2), false, database.GetDatabaseCfg().GetInfluxClient(), database.GetDatabaseCfg().GetInfluxOrg(), database.GetDatabaseCfg().GetInfluxBucket())
+	secondSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID2, sensorID2), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
 	if err != nil {
 		return 0, err
 	}
 
 	repositoryLogger.Info("Getting the count of values...")
-	valueCount, err := executeSelectQueryInflux(fmt.Sprintf(query.CountMeasurementValues, startTime, endTime, deviceID1, sensorID1), false, database.GetDatabaseCfg().GetInfluxClient(), database.GetDatabaseCfg().GetInfluxOrg(), database.GetDatabaseCfg().GetInfluxBucket())
+	valueCount, err := executeSelectQueryInflux(fmt.Sprintf(query.CountMeasurementValues, startTime, endTime, deviceID1, sensorID1), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
 	if err != nil {
 		return 0, err
 	}

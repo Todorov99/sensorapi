@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"github.com/Todorov99/sensorcli/pkg/logger"
-	"github.com/Todorov99/server/pkg/database"
+	"github.com/Todorov99/server/pkg/server/config"
 )
 
 var repositoryLogger = logger.NewLogrus("repositroy", os.Stdout)
@@ -12,30 +12,30 @@ var repositoryLogger = logger.NewLogrus("repositroy", os.Stdout)
 // CreateMeasurementRepository creates measurement reposiroty.
 func CreateMeasurementRepository() Repository {
 	return &measurementRepository{
-		postgreClient: database.GetDatabaseCfg().GetPostgreClient(),
-		influxClient:  database.GetDatabaseCfg().GetInfluxClient(),
-		org:           database.GetDatabaseCfg().GetInfluxOrg(),
-		bucket:        database.GetDatabaseCfg().GetInfluxBucket(),
+		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
+		influxClient:  config.GetDatabaseCfg().GetInfluxClient(),
+		org:           config.GetDatabaseCfg().GetInfluxOrg(),
+		bucket:        config.GetDatabaseCfg().GetInfluxBucket(),
 	}
 }
 
 // CreateSensorRepository creates sensor repository.
 func CreateSensorRepository() Repository {
 	return &sensorRepository{
-		postgreClient: database.GetDatabaseCfg().GetPostgreClient(),
+		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
 	}
 }
 
 // CreateDeviceRepository creates device repository.
 func CreateDeviceRepository() Repository {
 	return &deviceRepository{
-		postgreClient: database.GetDatabaseCfg().GetPostgreClient(),
+		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
 	}
 }
 
 // CreateDeviceRepository creates user repository.
 func CreateUserRepository() Repository {
 	return &userRepository{
-		postgreClient: database.GetDatabaseCfg().GetPostgreClient(),
+		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
 	}
 }
