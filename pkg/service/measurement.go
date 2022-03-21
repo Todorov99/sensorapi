@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"math"
+	"strconv"
 	"time"
 
 	sensorcmd "github.com/Todorov99/sensorcli/cmd"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
 	"github.com/Todorov99/server/pkg/dto"
+	"github.com/Todorov99/server/pkg/entity"
 	"github.com/Todorov99/server/pkg/global"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/mitchellh/mapstructure"
@@ -15,19 +19,23 @@ import (
 
 type MeasurementService interface {
 	Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, err chan error, response chan interface{}, done chan bool)
-	GetSensorsCorrelationCoefficient(deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
-	GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime string, endTime string) (string, error)
-	GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
-	AddMeasurements(measurement dto.Measurement) error
+	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
+	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
+	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
+	AddMeasurements(ctx context.Context, measurement dto.Measurement) error
 }
 
 type measurementService struct {
-	repository repository.Repository
+	measurementRepository repository.MeasurementRepository
+	deviceRepository      repository.DeviceRepository
+	sensorRepository      repository.SensorRepository
 }
 
 func NewMeasurementService() MeasurementService {
 	return &measurementService{
-		repository: repository.CreateMeasurementRepository(),
+		measurementRepository: repository.NewMeasurementRepository(),
+		sensorRepository:      repository.NewSensorRepository(),
+		deviceRepository:      repository.NewDeviceRepository(),
 	}
 }
 
@@ -64,7 +72,7 @@ func (m measurementService) Monitor(ctx context.Context, duration string, sensor
 				return
 			}
 
-			metric, err := m.scanMetrics(measurements, valueCfg, true)
+			metric, err := m.scanMetrics(ctx, measurements, valueCfg, true)
 			if err != nil {
 				errChan <- err
 				response <- metric
@@ -76,17 +84,22 @@ func (m measurementService) Monitor(ctx context.Context, duration string, sensor
 	}
 }
 
-func (m measurementService) GetSensorsCorrelationCoefficient(deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error) {
-	value, err := repository.GetSensorsCorrelationCoefficient(deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime)
+// func (m measurementService) GetSensorsCorrelationCoefficient(deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error) {
+// 	value, err := repository.GetSensorsCorrelationCoefficient(deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime)
+// 	if err != nil {
+// 		return 0.0, err
+// 	}
+
+// 	return value, nil
+// }
+
+func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error) {
+	err := m.ifDeviceAndSensorExists(ctx, deviceID, sensorID)
 	if err != nil {
-		return 0.0, err
+		return "", err
 	}
 
-	return value, nil
-}
-
-func (m measurementService) GetAverageValueOfMeasurements(deviceID string, sensorID string, startTime string, endTime string) (string, error) {
-	averageValue, err := repository.GetAverageValueOfMeasurements(deviceID, sensorID, startTime, endTime)
+	averageValue, err := m.measurementRepository.GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx, startTime, endTime, deviceID, sensorID)
 	if err != nil {
 		return "", err
 	}
@@ -94,13 +107,25 @@ func (m measurementService) GetAverageValueOfMeasurements(deviceID string, senso
 	return averageValue, nil
 }
 
-func (m measurementService) GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error) {
-	timestampMeasurements, err := m.repository.GetByID(measurementsBetweeTimestamp.StartTime, measurementsBetweeTimestamp.EndTime, measurementsBetweeTimestamp.DeviceID, measurementsBetweeTimestamp.SensorID)
+func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error) {
+	err := m.ifDeviceAndSensorExists(ctx, measurementsBetweeTimestamp.DeviceID, measurementsBetweeTimestamp.SensorID)
 	if err != nil {
 		return nil, err
 	}
-	measurements := []dto.Measurement{}
 
+	timestampMeasurements, err := m.measurementRepository.
+		GetMeasurementsBetweenTimestampByDeviceIDBySensorID(
+			ctx,
+			measurementsBetweeTimestamp.StartTime,
+			measurementsBetweeTimestamp.EndTime,
+			measurementsBetweeTimestamp.DeviceID,
+			measurementsBetweeTimestamp.SensorID,
+		)
+	if err != nil {
+		return nil, err
+	}
+
+	measurements := []dto.Measurement{}
 	err = mapstructure.Decode(timestampMeasurements, &measurements)
 	if err != nil {
 		return nil, err
@@ -112,15 +137,26 @@ func (m measurementService) GetMeasurementsBetweenTimestamp(measurementsBetweeTi
 	return measurements, nil
 }
 
-func (m measurementService) AddMeasurements(measurement dto.Measurement) error {
-	return m.repository.Add(measurement.MeasuredAt, measurement.Value,
-		measurement.SensorID, measurement.DeviceID)
+func (m measurementService) AddMeasurements(ctx context.Context, measurement dto.Measurement) error {
+	measurementEntity := entity.Measurement{}
+	err := mapstructure.Decode(measurement, &measurementEntity)
+	if err != nil {
+		return err
+	}
+	return m.measurementRepository.Add(ctx, measurementEntity)
 }
 
-func (m measurementService) scanMetrics(metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) (interface{}, error) {
+func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) (interface{}, error) {
 	for _, metr := range metrics {
 		if addToDb {
-			err := m.repository.Add(metr.MeasuredAt.Format(time.RFC3339), metr.Value, metr.SensorID, metr.DeviceID)
+			measurementEntity := entity.Measurement{
+				MeasuredAt: metr.MeasuredAt.Format(time.RFC3339),
+				Value:      metr.Value,
+				SensorID:   metr.SensorID,
+				DeviceID:   metr.DeviceID,
+			}
+
+			err := m.measurementRepository.Add(ctx, measurementEntity)
 			if err != nil {
 				return nil, err
 			}
@@ -161,4 +197,114 @@ func (m measurementService) scanMetrics(metrics []sensor.Measurment, valueCfg dt
 		}
 	}
 	return nil, nil
+}
+
+// GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
+func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error) {
+	serviceLogger.Info("Getting correlation coficient...")
+	err := m.ifDeviceAndSensorExists(context.Background(), deviceID1, sensorID1)
+	if err != nil {
+		return 0, err
+	}
+	serviceLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID1, sensorID1)
+
+	// firstSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID1, sensorID1), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
+	// if err != nil {
+	// 	return 0, err
+	// }
+
+	firstSensorValues, err := m.measurementRepository.
+		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
+			ctx, startTime, endTime, deviceID1, sensorID1)
+	if err != nil {
+		return 0, err
+	}
+
+	serviceLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID2, sensorID2)
+	// secondSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID2, sensorID2), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
+	// if err != nil {
+	// 	return 0, err
+	// }
+	secondSensorValues, err := m.measurementRepository.
+		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
+			ctx, startTime, endTime, deviceID2, sensorID2)
+	if err != nil {
+		return 0, err
+	}
+
+	serviceLogger.Info("Getting the count of values...")
+	// valueCount, err := executeSelectQueryInflux(fmt.Sprintf(query.CountMeasurementValues, startTime, endTime, deviceID1, sensorID1), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
+	// if err != nil {
+	// 	return 0, err
+	// }
+
+	countOfMeasurements, err := m.measurementRepository.
+		CountMeasurementsBetweenTimestampByDeviceIDBySensorID(
+			ctx, startTime, endTime, deviceID1, sensorID1,
+		)
+	if err != nil {
+		return 0, err
+	}
+
+	return correlationCoefficient(firstSensorValues, secondSensorValues, countOfMeasurements), nil
+}
+
+func correlationCoefficient(firstSensorValues []interface{}, secondSensorValues []interface{}, valueCount float64) float64 {
+
+	sumFirstSensor := 0.0
+	sumSecondSensor := 0.0
+	sumBothSensorValues := 0.0
+	squareSumFirstSensor := 0.0
+	squareSumSecondSensor := 0.0
+
+	for i := 0; i < int(valueCount)-1; i++ {
+
+		if i == len(firstSensorValues) || i == len(secondSensorValues) {
+			break
+		}
+
+		sumFirstSensor = sumFirstSensor + firstSensorValues[i].(float64)
+
+		sumSecondSensor = sumSecondSensor + secondSensorValues[i].(float64)
+
+		sumBothSensorValues = sumBothSensorValues + firstSensorValues[i].(float64)*secondSensorValues[i].(float64)
+
+		squareSumFirstSensor = squareSumFirstSensor + firstSensorValues[i].(float64)*firstSensorValues[i].(float64)
+		squareSumSecondSensor = squareSumSecondSensor + secondSensorValues[i].(float64)*secondSensorValues[i].(float64)
+	}
+
+	return float64((valueCount*sumBothSensorValues - sumFirstSensor*sumSecondSensor)) /
+		(math.Sqrt(float64((valueCount*squareSumFirstSensor - sumFirstSensor*sumFirstSensor) *
+			(valueCount*squareSumSecondSensor - sumSecondSensor*sumSecondSensor))))
+}
+
+func (m *measurementService) ifDeviceAndSensorExists(ctx context.Context, deviceID, sensorID string) error {
+	dID, err := strconv.Atoi(deviceID)
+	if err != nil {
+		return err
+	}
+	_, err = m.deviceRepository.GetDeviceNameByID(ctx, dID)
+	if err != nil {
+		if errors.Is(err, global.ErrorObjectNotFound) {
+			return fmt.Errorf("device with id: %d does not exist", dID)
+		}
+
+		return err
+	}
+
+	sID, err := strconv.Atoi(sensorID)
+	if err != nil {
+		return err
+	}
+
+	_, err = m.sensorRepository.GetByID(context.Background(), sID)
+	if err != nil {
+		if errors.Is(err, global.ErrorObjectNotFound) {
+			return fmt.Errorf("sensor with id: %d does not exist", sID)
+		}
+
+		return err
+	}
+
+	return nil
 }

@@ -1,6 +1,13 @@
 package controller
 
-import "net/http"
+import (
+	"net/http"
+	"os"
+
+	"github.com/Todorov99/sensorcli/pkg/logger"
+)
+
+var controllerLogger = logger.NewLogrus("controller", os.Stdout)
 
 // IController represent the commont REST verbs for the sensors and measurements
 type IController interface {

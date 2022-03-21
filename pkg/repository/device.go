@@ -1,134 +1,116 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
 
-	"github.com/Todorov99/server/pkg/dto"
+	"github.com/Todorov99/server/pkg/entity"
+	"github.com/Todorov99/server/pkg/global"
 	"github.com/Todorov99/server/pkg/repository/query"
+	"github.com/Todorov99/server/pkg/server/config"
 )
+
+type DeviceRepository interface {
+	GetDeviceNameByID(ctx context.Context, id int) (string, error)
+	GetDeviceIDByName(ctx context.Context, deviceName string) (string, error)
+	IRepository
+}
 
 type deviceRepository struct {
 	postgreClient *sql.DB
 }
 
-func (d *deviceRepository) GetAll() (interface{}, error) {
-	devices, err := d.GetByID()
+func NewDeviceRepository() DeviceRepository {
+	return &deviceRepository{
+		config.GetDatabaseCfg().GetPostgreClient(),
+	}
+}
+
+func (d *deviceRepository) GetAll(ctx context.Context) (interface{}, error) {
+	repositoryLogger.Debug("Getting all devicess...")
+	devices := []*entity.Device{}
+
+	err := executeSelectQuery(ctx, query.GetAllDevices, d.postgreClient, &devices)
 	if err != nil {
 		return nil, err
 	}
 
+	for _, device := range devices {
+		sensors := []entity.Sensor{}
+		err = executeSelectQuery(ctx, query.GetAllSensorsByDeviceID, d.postgreClient, &sensors, device.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		device.Sensors = append(device.Sensors, sensors...)
+	}
+	repositoryLogger.Debug("Devices successfully retrieved")
 	return devices, nil
 }
 
-func (d *deviceRepository) GetByID(args ...string) (interface{}, error) {
-
-	var devices []dto.Device
-	deviceSensors := []dto.Sensor{}
-
-	rowsRs, err := d.postgreClient.Query(query.GetAllDevices)
-
-	if len(args) != 0 {
-		rowsRs, err = d.postgreClient.Query(query.GetDeviceByID, args[0])
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	for rowsRs.Next() {
-
-		currentDevice := dto.Device{}
-
-		err := rowsRs.Scan(&currentDevice.ID, &currentDevice.Name, &currentDevice.Description)
-		if err != nil {
-			return nil, err
-		}
-
-		sensors, _ := getSensorByDeviceID(currentDevice.ID, d.postgreClient)
-
-		sensorBytes, err := json.Marshal(sensors)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal(sensorBytes, &deviceSensors)
-		if err != nil {
-			return nil, err
-		}
-
-		currentDevice.Sensors = deviceSensors
-		devices = append(devices, currentDevice)
-
-	}
-
-	if devices == nil {
-		return nil, fmt.Errorf("failed to get devices")
-	}
-
-	return devices, nil
-}
-
-func (d *deviceRepository) Add(args ...string) error {
+func (d *deviceRepository) Add(ctx context.Context, model interface{}) error {
 	repositoryLogger.Info("Adding device...")
-	// var deviceID int64
-	// err := executeSelectQuery(query.GetHighestDeviceID, d.postgreClient, &deviceID)
-	// if err != nil {
-	// 	return err
-	// }
-
-	checkForExistingDevice, err := getDeviceIDByName(args[0], d.postgreClient)
-	if err != nil {
-		return err
-	}
-
-	if checkForExistingDevice != "" {
-		return fmt.Errorf("device with name: %q already exists", args[0])
-	}
-
-	return executeModifyingQuery(query.InsertDevice, d.postgreClient, args[0], args[1])
+	device := model.(entity.Device)
+	return executeModifyingQuery(ctx, query.InsertDevice, d.postgreClient, device.Name, device.Description)
 }
 
-func (d *deviceRepository) Update(args ...string) error {
-	repositoryLogger.Info("Updating device with id: %s", args[2])
-	if !checkForExistingDeviceByID(args[2], d.postgreClient) {
-		return fmt.Errorf("invalid device id: %q", args[2])
-	}
-
-	return executeModifyingQuery(query.UpdateDevice, d.postgreClient, args[0], args[1], args[2])
+func (d *deviceRepository) Update(ctx context.Context, model interface{}) error {
+	device := model.(entity.Device)
+	return executeModifyingQuery(ctx, query.UpdateDevice, d.postgreClient, device.Name, device.Description, device.ID)
 }
 
-func (d *deviceRepository) Delete(id string) (interface{}, error) {
-	repositoryLogger.Infof("Deleting device with id: %q", id)
-	if !checkForExistingDeviceByID(id, d.postgreClient) {
-		return nil, fmt.Errorf("invalid device id: %q", id)
-	}
+func (d *deviceRepository) GetByID(ctx context.Context, id int) (interface{}, error) {
+	repositoryLogger.Debugf("Getting device by ID: %d", id)
+	device := &entity.Device{}
 
-	checkForAvailabeSensorsByDeviceID := checkForExistingSensorsByDeviceID(id, d.postgreClient)
-
-	if checkForAvailabeSensorsByDeviceID {
-		return nil, fmt.Errorf("failed to delete device with ID: %q. First you have to delete the sensors that belongs to it", id)
-	}
-
-	deletedDevice, err := d.GetByID(id)
+	err := executeSelectQuery(ctx, query.GetDeviceByID, d.postgreClient, device, id)
 	if err != nil {
 		return nil, err
 	}
 
-	return deletedDevice, executeModifyingQuery(query.DeleteDevice, d.postgreClient, id)
+	sensors := []entity.Sensor{}
+	err = executeSelectQuery(ctx, query.GetAllSensorsByDeviceID, d.postgreClient, &sensors, device.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	device.Sensors = append(device.Sensors, sensors...)
+	repositoryLogger.Debug("Devices successfully retrieved")
+
+	return device, nil
 }
 
-func getDeviceIDByName(deviceName string, postgreClient *sql.DB) (string, error) {
+func (d *deviceRepository) Delete(ctx context.Context, id int) error {
+	repositoryLogger.Infof("Deleting device with id: %q", id)
+	return executeModifyingQuery(ctx, query.DeleteDevice, d.postgreClient, id)
+}
+
+func (d *deviceRepository) GetDeviceIDByName(ctx context.Context, deviceName string) (string, error) {
 	repositoryLogger.Infof("Getting device ID by name: %q", deviceName)
 	id := ""
-	err := executeSelectQuery(query.GetDeviceIDByName, postgreClient, &id, deviceName)
+	err := executeSelectQuery(ctx, query.GetDeviceIDByName, d.postgreClient, &id, deviceName)
 	if err != nil {
-		return "", fmt.Errorf("failed getting device with name: %q", deviceName)
+		return "", fmt.Errorf("failed getting device with name: %q: %w", deviceName, err)
 	}
 
-	// if id != nil {
-	// 	return id.(string), nil
-	// }
+	if id == "" {
+		return "", global.ErrorObjectNotFound
+	}
+
 	return id, nil
+}
+
+func (d *deviceRepository) GetDeviceNameByID(ctx context.Context, id int) (string, error) {
+	var deviceName string
+	err := executeSelectQuery(ctx, query.GetDeviceNameByID, d.postgreClient, &deviceName, id)
+	if err != nil {
+		return "", err
+	}
+
+	if deviceName == "" {
+		return "", global.ErrorObjectNotFound
+	}
+
+	return deviceName, nil
 }

@@ -1,10 +1,13 @@
 package service
 
 import (
+	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/entity"
+	"github.com/Todorov99/server/pkg/global"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/Todorov99/server/pkg/server/config"
 	"github.com/mitchellh/mapstructure"
@@ -12,47 +15,56 @@ import (
 )
 
 type UserService interface {
-	Register(registerDto dto.Register) error
-	Login(loginDto dto.Login) (string, error)
+	Register(ctx context.Context, registerDto dto.Register) error
+	Login(ctx context.Context, loginDto dto.Login) (string, error)
 }
 
 type userService struct {
-	userRepository repository.Repository
+	userRepository repository.UserRepository
 }
 
 func NewUserService() UserService {
 	return &userService{
-		userRepository: repository.CreateUserRepository(),
+		userRepository: repository.NewUserRepository(),
 	}
 }
 
-func (u *userService) Register(registerDto dto.Register) error {
-	passHash, err := getHash([]byte(registerDto.Password))
-	if err != nil {
-		return err
+func (u *userService) Register(ctx context.Context, registerDto dto.Register) error {
+	serviceLogger.Debugf("Registering user with username: %q", registerDto.UserName)
+	_, err := u.userRepository.GetUserByUsername(ctx, registerDto.UserName)
+	if errors.Is(err, global.ErrorUserWithUsernameNotExist) {
+		passHash, err := getHash([]byte(registerDto.Password))
+		if err != nil {
+			return err
+		}
+
+		registerDto.Password = passHash
+
+		userEntity := entity.User{}
+		err = mapstructure.Decode(registerDto, &userEntity)
+		if err != nil {
+			return err
+		}
+
+		return u.userRepository.AddUser(ctx, userEntity)
 	}
 
-	registerDto.Password = passHash
-	return u.userRepository.Add(registerDto.UserName, registerDto.Password, registerDto.FirstName, registerDto.LastName, registerDto.Email)
+	return fmt.Errorf("user with username: %s already exists", registerDto.UserName)
 }
 
-func (u *userService) Login(loginDto dto.Login) (string, error) {
-	user, err := u.userRepository.GetByID(loginDto.UserName)
+func (u *userService) Login(ctx context.Context, loginDto dto.Login) (string, error) {
+	user, err := u.userRepository.GetUserByUsername(ctx, loginDto.UserName)
 	if err != nil {
 		return "", err
 	}
-	userEntity := entity.User{}
-	err = mapstructure.Decode(user, &userEntity)
-	if err != nil {
-		return "", err
-	}
-	err = bcrypt.CompareHashAndPassword([]byte(userEntity.Password), []byte(loginDto.Password))
+
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginDto.Password))
 	if err != nil {
 		return "", fmt.Errorf("invalid password: %w", err)
 	}
 
 	jwtCfg := config.GetJWTCfg()
-	token, err := jwtCfg.GenerateJWT(userEntity)
+	token, err := jwtCfg.GenerateJWT(user)
 	if err != nil {
 		return "", err
 	}
