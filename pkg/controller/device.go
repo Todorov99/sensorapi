@@ -9,7 +9,7 @@ import (
 )
 
 type deviceController struct {
-	deviceService service.IService1
+	deviceService service.IService
 }
 
 func NewDeviceController() IController {

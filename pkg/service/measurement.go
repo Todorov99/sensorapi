@@ -84,15 +84,6 @@ func (m measurementService) Monitor(ctx context.Context, duration string, sensor
 	}
 }
 
-// func (m measurementService) GetSensorsCorrelationCoefficient(deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error) {
-// 	value, err := repository.GetSensorsCorrelationCoefficient(deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime)
-// 	if err != nil {
-// 		return 0.0, err
-// 	}
-
-// 	return value, nil
-// }
-
 func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error) {
 	err := m.ifDeviceAndSensorExists(ctx, deviceID, sensorID)
 	if err != nil {
@@ -207,12 +198,6 @@ func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context
 		return 0, err
 	}
 	serviceLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID1, sensorID1)
-
-	// firstSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID1, sensorID1), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
-	// if err != nil {
-	// 	return 0, err
-	// }
-
 	firstSensorValues, err := m.measurementRepository.
 		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
 			ctx, startTime, endTime, deviceID1, sensorID1)
@@ -221,10 +206,6 @@ func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context
 	}
 
 	serviceLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID2, sensorID2)
-	// secondSensorValues, err := executeSelectQueryInflux(fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID2, sensorID2), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
-	// if err != nil {
-	// 	return 0, err
-	// }
 	secondSensorValues, err := m.measurementRepository.
 		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
 			ctx, startTime, endTime, deviceID2, sensorID2)
@@ -233,11 +214,6 @@ func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context
 	}
 
 	serviceLogger.Info("Getting the count of values...")
-	// valueCount, err := executeSelectQueryInflux(fmt.Sprintf(query.CountMeasurementValues, startTime, endTime, deviceID1, sensorID1), false, config.GetDatabaseCfg().GetInfluxClient(), config.GetDatabaseCfg().GetInfluxOrg(), config.GetDatabaseCfg().GetInfluxBucket())
-	// if err != nil {
-	// 	return 0, err
-	// }
-
 	countOfMeasurements, err := m.measurementRepository.
 		CountMeasurementsBetweenTimestampByDeviceIDBySensorID(
 			ctx, startTime, endTime, deviceID1, sensorID1,

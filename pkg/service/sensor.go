@@ -15,7 +15,7 @@ type sensorService struct {
 	sensorRepository repository.SensorRepository
 }
 
-func NewSensorService() IService1 {
+func NewSensorService() IService {
 	return &sensorService{
 		sensorRepository: repository.NewSensorRepository(),
 	}

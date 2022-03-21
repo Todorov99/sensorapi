@@ -16,7 +16,7 @@ type deviceService struct {
 	deviceRepository repository.DeviceRepository
 }
 
-func NewDeviceService() IService1 {
+func NewDeviceService() IService {
 	return &deviceService{
 		deviceRepository: repository.NewDeviceRepository(),
 	}

@@ -11,7 +11,7 @@ import (
 var sensor = dto.Sensor{}
 
 type sensorController struct {
-	sensorService service.IService1
+	sensorService service.IService
 }
 
 func NewSensorController() IController {
