@@ -25,7 +25,6 @@ func NewJWTCfg(applicationProperties *ApplicationProperties) (*JWTCfg, error) {
 	}
 	jwtAuthProps := applicationProperties.Authorization.JWT
 
-	fmt.Println(jwtAuthProps)
 	expTime, err := time.ParseDuration(jwtAuthProps.ExpirationTime)
 	if err != nil {
 		return nil, err

@@ -60,7 +60,7 @@ func (u *userService) Login(ctx context.Context, loginDto dto.Login) (string, er
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(loginDto.Password))
 	if err != nil {
-		return "", fmt.Errorf("invalid password: %w", err)
+		return "", fmt.Errorf("invalid password")
 	}
 
 	jwtCfg := config.GetJWTCfg()

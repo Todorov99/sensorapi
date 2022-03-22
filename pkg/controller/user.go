@@ -32,11 +32,14 @@ func (l *userController) Login(w http.ResponseWriter, r *http.Request) {
 
 	token, err := l.userService.Login(r.Context(), login)
 	if err != nil {
+		login.Password = "****"
 		response(w, "Failed to log in", err, login, http.StatusConflict)
 		return
 	}
 	w.Header().Set("Token", token)
-	response(w, "Sensor POST query execution.", err, login, http.StatusConflict)
+	response(w, "Sensor POST query execution.", err, dto.SuccessfulResponse{
+		Message: "Successfully logged in",
+	}, http.StatusConflict)
 }
 
 func (l *userController) Register(w http.ResponseWriter, r *http.Request) {
@@ -52,5 +55,6 @@ func (l *userController) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = l.userService.Register(r.Context(), user)
+	user.Password = "****"
 	response(w, "Sensor POST query execution.", err, user, http.StatusConflict)
 }
