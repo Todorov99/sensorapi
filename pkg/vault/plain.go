@@ -40,6 +40,30 @@ func (p *plain) Get(secretID string) (Secret, error) {
 	return secret, nil
 }
 
+func (p *plain) Store(secret Secret) error {
+	vaultLogger.Debug("Saving secret in the vault")
+	p.mx.Lock()
+	defer p.mx.Unlock()
+	f, err := os.Open(p.vaultPath)
+	if err != nil {
+		return nil
+	}
+	defer func() {
+		f.Close()
+	}()
+
+	secretBytes, err := yaml.Marshal(secret)
+	if err != nil {
+		return err
+	}
+
+	_, err = f.Write(secretBytes)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (p *plain) read() (map[string]Secret, error) {
 	vaultLogger.Debugf("Reading from: %q...", p.vaultPath)
 

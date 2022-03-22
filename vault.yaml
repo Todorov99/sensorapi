@@ -4,3 +4,12 @@
 - id: postgreSecret
   name: postgres
   value: Password321
+- id: audSecret
+  name: auienceJWTClaim
+  value: sensor
+- id: issSecret
+  name: issuerJWTClaim
+  value: https://ttodorov.com
+- id: signingKey
+  name: JWTSigningKey
+  value: ttodorovSecretSignJWTKey

@@ -4,45 +4,47 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/global"
-	"github.com/Todorov99/server/pkg/models"
 	"github.com/Todorov99/server/pkg/service"
 )
 
 var (
-	measurements                = models.Measurement{}
-	measurementsBetweeTimestamp = models.MeasurementBetweenTimestamp{}
+	measurements                = dto.Measurement{}
+	measurementsBetweeTimestamp = dto.MeasurementBetweenTimestamp{}
 )
 
 type measurementController struct {
 	measurementService service.MeasurementService
 }
 
-func NewMeasurementController() IController {
+func NewMeasurementController() *measurementController {
 	return &measurementController{
 		measurementService: service.NewMeasurementService(),
 	}
 }
 
-//GetAll gets all measurements for current device and sensor ID between concrete timestamp
-func (m *measurementController) GetAll(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp(w http.ResponseWriter, r *http.Request) {
 	controllerLogger.Info("Measurement GET query execution.")
+	defer func() {
+		r.Body.Close()
+	}()
+
 	err := json.NewDecoder(r.Body).Decode(&measurementsBetweeTimestamp)
 	if err != nil {
-		response(w, "", "Measurement Get query", err, measurementsBetweeTimestamp, 500)
+		response(w, "Measurement Get query", err, measurementsBetweeTimestamp, 500)
 		return
 	}
 
-	timestampMeasurements, err := m.measurementService.GetMeasurementsBetweenTimestamp(measurementsBetweeTimestamp)
+	timestampMeasurements, err := m.measurementService.GetMeasurementsBetweenTimestamp(r.Context(), measurementsBetweeTimestamp)
 	if err != nil {
-		response(w, "", "Get all measurements between timestamp finished with error", err, nil, http.StatusBadRequest)
+		response(w, "Get all measurements between timestamp finished with error", err, nil, http.StatusBadRequest)
 		return
 	}
-	response(w, "", "Measurement GET query execution.", err, timestampMeasurements, http.StatusOK)
+	response(w, "Measurement GET query execution.", err, timestampMeasurements, http.StatusOK)
 }
 
-//Post executes post request to influx 2.0 db
-func (s *measurementController) Post(w http.ResponseWriter, r *http.Request) {
+func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -51,44 +53,23 @@ func (s *measurementController) Post(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&measurements)
 	if err != nil {
-		response(w, "", "Measurement Get query", err, measurements, 500)
+		response(w, "Measurement Get query", err, measurements, 500)
 		return
 	}
 
-	err = s.measurementService.AddMeasurements(measurements)
+	err = s.measurementService.AddMeasurements(r.Context(), measurements)
 	if err != nil {
-		response(w, "Measurement added.", "Measurement POST query execution.", err, measurements, http.StatusConflict)
+		response(w, "Measurement POST query execution.", err, measurements, http.StatusConflict)
 	}
 
-	response(w, "Measurement added.", "Measurement POST query execution.", err, measurements, http.StatusOK)
+	response(w, "Measurement POST query execution.", err, measurements, http.StatusOK)
 }
 
-// Not supported
-func (s *measurementController) Get(w http.ResponseWriter, r *http.Request) {
-}
-
-// Not supported
-func (s *measurementController) Put(w http.ResponseWriter, r *http.Request) {
-}
-
-// Not supported
-func (s *measurementController) Delete(w http.ResponseWriter, r *http.Request) {
-}
-
-type MeasurementAnalizer struct {
-	measurementService service.MeasurementService
-}
-
-func NewMeasurementAnalizer() *MeasurementAnalizer {
-	return &MeasurementAnalizer{
-		measurementService: service.NewMeasurementService(),
-	}
-}
-
-func (m *MeasurementAnalizer) GetSensorAverageValue(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
+
 	var averageValue = make(map[string]string)
 
 	keys := r.URL.Query()
@@ -97,20 +78,21 @@ func (m *MeasurementAnalizer) GetSensorAverageValue(w http.ResponseWriter, r *ht
 	startTime := keys["startTime"][0]
 	endTime := keys["endTime"][0]
 
-	averageVal, err := m.measurementService.GetAverageValueOfMeasurements(deviceID, sensorID, startTime, endTime)
+	averageVal, err := m.measurementService.GetAverageValueOfMeasurements(r.Context(), deviceID, sensorID, startTime, endTime)
 	if err != nil {
-		response(w, "", "Failed getting average value", err, 0, http.StatusNotFound)
+		response(w, "Failed getting average value", err, 0, http.StatusNotFound)
 		return
 	}
 
 	averageValue["averageValue"] = averageVal
-	response(w, "", "Getting sensor average values.", err, averageValue, http.StatusNotFound)
+	response(w, "Getting sensor average values.", err, averageValue, http.StatusNotFound)
 }
 
-func (m *MeasurementAnalizer) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
+
 	var correlationCoefficient = make(map[string]float64)
 
 	keys := r.URL.Query()
@@ -121,19 +103,19 @@ func (m *MeasurementAnalizer) GetSensorsCorrelationCoefficient(w http.ResponseWr
 	startTime := keys["startTime"][0]
 	endTime := keys["endTime"][0]
 
-	coefficient, err := m.measurementService.GetSensorsCorrelationCoefficient(deviceId1, deviceId2, sensorId1, sensorId2, startTime, endTime)
+	coefficient, err := m.measurementService.GetSensorsCorrelationCoefficient(r.Context(), deviceId1, deviceId2, sensorId1, sensorId2, startTime, endTime)
 	correlationCoefficient["correlationCoefficient"] = coefficient
-	response(w, "", "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)
+	response(w, "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)
 }
 
-func (m *MeasurementAnalizer) Monitor(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
 
 	keys := r.URL.Query()
 
-	valueCfg := models.ValueCfg{}
+	valueCfg := dto.ValueCfg{}
 	decodeErr := json.NewDecoder(r.Body).Decode(&valueCfg)
 	if decodeErr != nil {
 		controllerLogger.Error(decodeErr)
@@ -157,16 +139,16 @@ func (m *MeasurementAnalizer) Monitor(w http.ResponseWriter, r *http.Request) {
 		case err := <-err:
 			if err != nil {
 				metric := <-metricChan
-				response(w, "", "Monitoring finished", err, metric, http.StatusOK)
+				response(w, "Monitoring finished", err, metric, http.StatusOK)
 				return
 			}
 		case <-done:
-			response(w, "Skip", "Monitoring finished", nil, nil, http.StatusOK)
+			response(w, "Monitoring finished", nil, nil, http.StatusOK)
 			return
 		case rs := <-metricChan:
-			response(w, "", "Monitoring...", nil, rs, http.StatusOK)
+			response(w, "Monitoring...", nil, rs, http.StatusOK)
 		case <-r.Context().Done():
-			response(w, "", "Monitoring finished with error", r.Context().Err(), nil, http.StatusConflict)
+			response(w, "Monitoring finished with error", r.Context().Err(), nil, http.StatusConflict)
 		}
 	}
 }

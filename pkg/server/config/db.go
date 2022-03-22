@@ -3,17 +3,10 @@ package config
 import (
 	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/Todorov99/server/pkg/vault"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
-	_ "github.com/lib/pq"
-	"gopkg.in/yaml.v2"
 )
-
-var configLogger = logger.NewLogrus("config", os.Stdout)
 
 type DatabaseCfg struct {
 	influxDbClient influxdb2.Client
@@ -22,13 +15,8 @@ type DatabaseCfg struct {
 	postreDbClient *sql.DB
 }
 
-func NewDatabaseClients(propsFile string) (*DatabaseCfg, error) {
+func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*DatabaseCfg, error) {
 	configLogger.Debug("Getting databaseClients...")
-
-	applicationProperties, err := loadApplicationProperties(propsFile)
-	if err != nil {
-		return nil, err
-	}
 
 	vault, err := vault.New(applicationProperties.VaultType)
 	if err != nil {
@@ -62,7 +50,7 @@ func NewDatabaseClients(propsFile string) (*DatabaseCfg, error) {
 		return nil, err
 	}
 
-	configLogger.Debug("Database clients successfully initialized")
+	configLogger.Debug("Database Config successfully initialized")
 	return &DatabaseCfg{
 		influxDbClient: influxdbClient,
 		influxOrg:      applicationProperties.InfluxProps.Org,
@@ -85,25 +73,4 @@ func (d *DatabaseCfg) GetInfluxOrg() string {
 
 func (d *DatabaseCfg) GetInfluxBucket() string {
 	return d.influxBucket
-}
-
-func loadApplicationProperties(propsFile string) (*ApplicationProperties, error) {
-	appPropersties := &ApplicationProperties{}
-	absoluteFilePath, err := filepath.Abs(propsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed getting absolute path form: %q", propsFile)
-	}
-
-	configLogger.Debugf("Loading property file: %q...", absoluteFilePath)
-	b, err := os.ReadFile(absoluteFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed reading config file from: %q", absoluteFilePath)
-	}
-
-	err = yaml.Unmarshal(b, appPropersties)
-	if err != nil {
-		return nil, err
-	}
-	configLogger.Debug("Property file successfully loaded")
-	return appPropersties, nil
 }

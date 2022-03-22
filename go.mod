@@ -4,6 +4,7 @@ go 1.17
 
 require (
 	github.com/Todorov99/sensorcli v0.0.0-20220315212340-8e4e39b11a8d
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040
 	github.com/lib/pq v1.10.2
@@ -11,6 +12,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.10.1
+	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
 )
 
 require (
