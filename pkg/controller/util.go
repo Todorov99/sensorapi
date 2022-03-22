@@ -33,6 +33,5 @@ func getIDFromPathVariable(r *http.Request) int {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(id)
 	return id
 }

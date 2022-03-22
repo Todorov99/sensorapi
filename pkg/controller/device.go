@@ -19,11 +19,19 @@ func NewDeviceController() IController {
 }
 
 func (d *deviceController) GetAll(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	devices, err := d.deviceService.GetAll(r.Context())
 	response(w, "Device GET query execution.", err, devices, http.StatusNotFound)
 }
 
-func (d *deviceController) Get(w http.ResponseWriter, r *http.Request) {
+func (d *deviceController) GetByID(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	deviceID := getIDFromPathVariable(r)
 	controllerLogger.Infof("Getting device with ID: %q", deviceID)
 
@@ -32,6 +40,10 @@ func (d *deviceController) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *deviceController) Post(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	addDeviceDto := dto.AddUpdateDeviceDto{}
 	err := json.NewDecoder(r.Body).Decode(&addDeviceDto)
 	if err != nil {
@@ -45,6 +57,10 @@ func (d *deviceController) Post(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *deviceController) Put(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	updateDeviceDto := dto.AddUpdateDeviceDto{}
 	err := json.NewDecoder(r.Body).Decode(&updateDeviceDto)
 	if err != nil {
@@ -60,6 +76,10 @@ func (d *deviceController) Put(w http.ResponseWriter, r *http.Request) {
 }
 
 func (d *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	deviceID := getIDFromPathVariable(r)
 	controllerLogger.Debugf("Deleting device with ID: %q", deviceID)
 

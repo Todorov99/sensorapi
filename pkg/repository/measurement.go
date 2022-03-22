@@ -44,7 +44,7 @@ func (m *measurementRepository) GetMeasurementsFromStartingTime(ctx context.Cont
 }
 
 func (m *measurementRepository) GetMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) ([]interface{}, error) {
-	influxQuery := fmt.Sprintf(query.GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId, startTime, endTime, deviceID, sensorID)
+	influxQuery := fmt.Sprintf(query.GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId, m.bucket, startTime, endTime, deviceID, sensorID)
 
 	measurements, err := executeSelectQueryInflux(ctx, influxQuery, true, m.influxClient, m.org, m.bucket)
 	if err != nil {
@@ -66,7 +66,7 @@ func (m *measurementRepository) Add(ctx context.Context, measurement entity.Meas
 func (m *measurementRepository) GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime string, endTime string, deviceID string, sensorID string) (string, error) {
 	repositoryLogger.Infof("Getting average value of measurements between %s - %s", startTime, endTime)
 
-	influxQuery := fmt.Sprintf(query.GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId, startTime, endTime, deviceID, sensorID)
+	influxQuery := fmt.Sprintf(query.GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId, m.bucket, startTime, endTime, deviceID, sensorID)
 	average, err := executeSelectQueryInflux(ctx, influxQuery, true, m.influxClient, m.org, m.bucket)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot query an empty range") {
@@ -83,7 +83,7 @@ func (m *measurementRepository) GetMeasurementsAverageValueBetweenTimestampByDev
 
 func (m *measurementRepository) CountMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) (float64, error) {
 	repositoryLogger.Debugf("Getting the count of measurement values between %s - %s values...", startTime, endTime)
-	valueCount, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.CountMeasurementValues, startTime, endTime, deviceID, sensorID), false, m.influxClient, m.org, m.bucket)
+	valueCount, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.CountMeasurementValues, m.bucket, startTime, endTime, deviceID, sensorID), false, m.influxClient, m.org, m.bucket)
 	if err != nil {
 		return 0, err
 	}
@@ -96,7 +96,7 @@ func (m *measurementRepository) CountMeasurementsBetweenTimestampByDeviceIDBySen
 }
 
 func (m *measurementRepository) GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) ([]interface{}, error) {
-	values, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, startTime, endTime, deviceID, sensorID), false, m.influxClient, m.org, m.bucket)
+	values, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, m.bucket, startTime, endTime, deviceID, sensorID), false, m.influxClient, m.org, m.bucket)
 	if err != nil {
 		return nil, err
 	}

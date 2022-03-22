@@ -18,15 +18,18 @@ type measurementController struct {
 	measurementService service.MeasurementService
 }
 
-func NewMeasurementController() IController {
+func NewMeasurementController() *measurementController {
 	return &measurementController{
 		measurementService: service.NewMeasurementService(),
 	}
 }
 
-//GetAll gets all measurements for current device and sensor ID between concrete timestamp
-func (m *measurementController) GetAll(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp(w http.ResponseWriter, r *http.Request) {
 	controllerLogger.Info("Measurement GET query execution.")
+	defer func() {
+		r.Body.Close()
+	}()
+
 	err := json.NewDecoder(r.Body).Decode(&measurementsBetweeTimestamp)
 	if err != nil {
 		response(w, "Measurement Get query", err, measurementsBetweeTimestamp, 500)
@@ -41,8 +44,7 @@ func (m *measurementController) GetAll(w http.ResponseWriter, r *http.Request) {
 	response(w, "Measurement GET query execution.", err, timestampMeasurements, http.StatusOK)
 }
 
-//Post executes post request to influx 2.0 db
-func (s *measurementController) Post(w http.ResponseWriter, r *http.Request) {
+func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -63,32 +65,11 @@ func (s *measurementController) Post(w http.ResponseWriter, r *http.Request) {
 	response(w, "Measurement POST query execution.", err, measurements, http.StatusOK)
 }
 
-// Not supported
-func (s *measurementController) Get(w http.ResponseWriter, r *http.Request) {
-}
-
-// Not supported
-func (s *measurementController) Put(w http.ResponseWriter, r *http.Request) {
-}
-
-// Not supported
-func (s *measurementController) Delete(w http.ResponseWriter, r *http.Request) {
-}
-
-type MeasurementAnalizer struct {
-	measurementService service.MeasurementService
-}
-
-func NewMeasurementAnalizer() *MeasurementAnalizer {
-	return &MeasurementAnalizer{
-		measurementService: service.NewMeasurementService(),
-	}
-}
-
-func (m *MeasurementAnalizer) GetSensorAverageValue(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
+
 	var averageValue = make(map[string]string)
 
 	keys := r.URL.Query()
@@ -107,10 +88,11 @@ func (m *MeasurementAnalizer) GetSensorAverageValue(w http.ResponseWriter, r *ht
 	response(w, "Getting sensor average values.", err, averageValue, http.StatusNotFound)
 }
 
-func (m *MeasurementAnalizer) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()
+
 	var correlationCoefficient = make(map[string]float64)
 
 	keys := r.URL.Query()
@@ -126,7 +108,7 @@ func (m *MeasurementAnalizer) GetSensorsCorrelationCoefficient(w http.ResponseWr
 	response(w, "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)
 }
 
-func (m *MeasurementAnalizer) Monitor(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		r.Body.Close()
 	}()

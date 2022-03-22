@@ -12,17 +12,17 @@ type userController struct {
 	userService service.UserService
 }
 
-func NewUserController() IController {
+func NewUserController() *userController {
 	return &userController{
 		userService: service.NewUserService(),
 	}
 }
 
-func (l *userController) GetAll(w http.ResponseWriter, r *http.Request) {
+func (l *userController) Login(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
 
-}
-
-func (l *userController) Get(w http.ResponseWriter, r *http.Request) {
 	login := dto.Login{}
 	err := json.NewDecoder(r.Body).Decode(&login)
 	if err != nil {
@@ -39,7 +39,11 @@ func (l *userController) Get(w http.ResponseWriter, r *http.Request) {
 	response(w, "Sensor POST query execution.", err, login, http.StatusConflict)
 }
 
-func (l *userController) Post(w http.ResponseWriter, r *http.Request) {
+func (l *userController) Register(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	user := dto.Register{}
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -49,12 +53,4 @@ func (l *userController) Post(w http.ResponseWriter, r *http.Request) {
 
 	err = l.userService.Register(r.Context(), user)
 	response(w, "Sensor POST query execution.", err, user, http.StatusConflict)
-}
-
-func (l *userController) Put(w http.ResponseWriter, r *http.Request) {
-
-}
-
-func (l *userController) Delete(w http.ResponseWriter, r *http.Request) {
-
 }

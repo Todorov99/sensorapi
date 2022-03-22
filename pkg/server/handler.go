@@ -19,32 +19,30 @@ func HandleRequest(port string) error {
 	routes := mux.NewRouter().StrictSlash(true)
 
 	measurementController := controller.NewMeasurementController()
-	measurementAnalizer := controller.NewMeasurementAnalizer()
 	deviceController := controller.NewDeviceController()
 	sensorController := controller.NewSensorController()
 	userController := controller.NewUserController()
 
-	routes.HandleFunc("/api/users/login", userController.Get).Methods("Get")
-	routes.HandleFunc("/api/users/register", userController.Post).Methods("POST")
+	routes.HandleFunc("/api/users/login", userController.Login).Methods("Get")
+	routes.HandleFunc("/api/users/register", userController.Register).Methods("POST")
 
-	routes.Handle("/api/device/{id}", isAuthorized(deviceController.Get)).Methods("GET")
+	routes.Handle("/api/device/{id}", isAuthorized(deviceController.GetByID)).Methods("GET")
 	routes.Handle("/api/devices/all", isAuthorized(deviceController.GetAll)).Methods("GET")
 	routes.Handle("/api/device/add", isAuthorized(deviceController.Post)).Methods("POST")
 	routes.Handle("/api/device/{id}", isAuthorized(deviceController.Put)).Methods("PUT")
 	routes.Handle("/api/device/{id}", isAuthorized(deviceController.Delete)).Methods("DELETE")
 
 	routes.Handle("/api/sensor/all", isAuthorized(sensorController.GetAll)).Methods("GET")
-	routes.Handle("/api/sensor/{id}", isAuthorized(sensorController.Get)).Methods("GET")
+	routes.Handle("/api/sensor/{id}", isAuthorized(sensorController.GetByID)).Methods("GET")
 	routes.Handle("/api/sensor/add", isAuthorized(sensorController.Post)).Methods("POST")
 	routes.Handle("/api/sensor/{id}", isAuthorized(sensorController.Put)).Methods("PUT")
 	routes.Handle("/api/sensor/{id}", isAuthorized(sensorController.Delete)).Methods("DELETE")
 
-	routes.Handle("/measurement", isAuthorized(measurementController.GetAll)).Methods("GET")
-	routes.Handle("/measurement", isAuthorized(measurementController.Post)).Methods("POST")
-
-	routes.Handle("/collectMeasurements", isAuthorized(measurementAnalizer.Monitor)).Methods("POST")
-	routes.Handle("/sensorAverageValue", isAuthorized(measurementAnalizer.GetSensorAverageValue)).Methods("GET")
-	routes.Handle("/sensorsCorrelationCoefficient", isAuthorized(measurementAnalizer.GetSensorsCorrelationCoefficient)).Methods("GET")
+	routes.Handle("/api/measurement", isAuthorized(measurementController.GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp)).Methods("GET")
+	routes.Handle("/api/measurement", isAuthorized(measurementController.AddMeasurement)).Methods("POST")
+	routes.Handle("/api/measurement/collect", isAuthorized(measurementController.Monitor)).Methods("POST")
+	routes.Handle("/api/measurement/average", isAuthorized(measurementController.GetSensorAverageValue)).Methods("GET")
+	routes.Handle("/api/measurement/correlation", isAuthorized(measurementController.GetSensorsCorrelationCoefficient)).Methods("GET")
 
 	return http.ListenAndServe(fmt.Sprintf(":%s", port), routes)
 }

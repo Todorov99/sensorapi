@@ -21,11 +21,19 @@ func NewSensorController() IController {
 }
 
 func (s *sensorController) GetAll(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	data, err := s.sensorService.GetAll(r.Context())
 	response(w, "Sensor GET query execution.", err, data, http.StatusNotFound)
 }
 
-func (s *sensorController) Get(w http.ResponseWriter, r *http.Request) {
+func (s *sensorController) GetByID(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	sensorID := getIDFromPathVariable(r)
 	controllerLogger.Debugf("DEBUG path variable: %s", sensorID)
 
@@ -34,6 +42,10 @@ func (s *sensorController) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *sensorController) Post(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	err := json.NewDecoder(r.Body).Decode(&sensor)
 	if err != nil {
 		response(w, "Sensor Post query", err, sensor, 500)
@@ -45,6 +57,10 @@ func (s *sensorController) Post(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *sensorController) Put(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
 	err := json.NewDecoder(r.Body).Decode(&sensor)
 	if err != nil {
 		response(w, "Sensor Put query", err, sensor, 500)
