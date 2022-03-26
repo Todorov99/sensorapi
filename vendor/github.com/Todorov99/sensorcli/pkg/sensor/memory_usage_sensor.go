@@ -19,8 +19,8 @@ type cpuMemorySensor struct {
 	availableMemory   string
 	usedMemory        string
 	usedPercentMemory string
-	deviceID          string
-	sensors           []sensor
+	deviceID          int32
+	sensors           []Sensor
 }
 
 // CreateMemorySensor creates instance of memory sensor.
@@ -48,7 +48,7 @@ func (memoryS *cpuMemorySensor) ValidateUnit() error {
 	sensorLogger.Info("Validating memory sensor units...")
 	var err error
 
-	currentDeviceSensors, err := devices.getDeviceSensorsByGroup(memorySensor)
+	currentDeviceSensors, err := device.GetDeviceSensorsByGroup(memorySensor)
 	if err != nil {
 		return fmt.Errorf("failed to get current device sensors: %w", err)
 	}
@@ -72,14 +72,14 @@ func (memoryS *cpuMemorySensor) SetSysInfoFile(filepath string) {
 func getMemoryUsageData(ctx context.Context, format string) ([]Measurment, error) {
 	sensorLogger.Info("Getting memory usage data...")
 
-	deviceID, err := devices.getDeviceID()
+	deviceID, err := device.GetDeviceID()
 	if err != nil {
 		msg := "failed to get deviceID: %w"
 		sensorLogger.Errorf(msg, err)
 		return nil, fmt.Errorf(msg, err)
 	}
 
-	sensors, err := devices.getDeviceSensorsByGroup(memorySensor)
+	sensors, err := device.GetDeviceSensorsByGroup(memorySensor)
 	if err != nil {
 		msg := "failed to get sensorID: %w"
 		sensorLogger.Errorf(msg, err)

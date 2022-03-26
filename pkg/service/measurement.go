@@ -18,7 +18,7 @@ import (
 )
 
 type MeasurementService interface {
-	Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, err chan error, response chan interface{}, done chan bool)
+	Monitor(ctx context.Context, deviceID int, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, err chan error, response chan interface{}, done chan bool)
 	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
 	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
@@ -39,12 +39,23 @@ func NewMeasurementService() MeasurementService {
 	}
 }
 
-func (m measurementService) Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
+func (m measurementService) Monitor(ctx context.Context, deviceID int, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
 	defer func() {
 		close(errChan)
 		close(response)
 		close(done)
 	}()
+
+	device, err := m.deviceRepository.GetByID(ctx, deviceID)
+	if err != nil {
+		if errors.Is(err, global.ErrorObjectNotFound) {
+			errChan <- fmt.Errorf("device with ID: %d does not exist", deviceID)
+			return
+		}
+		response <- nil
+		errChan <- err
+		return
+	}
 
 	d, err := time.ParseDuration(duration)
 	if err != nil {
@@ -66,7 +77,7 @@ func (m measurementService) Monitor(ctx context.Context, duration string, sensor
 			errChan <- err
 			return
 		default:
-			measurements, err := cpu.GetMeasurements(ctx)
+			measurements, err := cpu.GetMeasurements(ctx, device)
 			if err != nil {
 				errChan <- err
 				return

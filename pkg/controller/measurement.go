@@ -2,7 +2,9 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/global"
@@ -123,7 +125,7 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 	}
 
 	metricChan := make(chan interface{})
-	err := make(chan error)
+	errChan := make(chan error)
 	done := make(chan bool)
 
 	sensorGroupsWithSysFiles := map[string]string{
@@ -132,11 +134,17 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		global.MemoryGroup:   "",
 	}
 
-	go m.measurementService.Monitor(r.Context(), keys.Get("duration"), sensorGroupsWithSysFiles, valueCfg, err, metricChan, done)
+	deviceID, err := strconv.Atoi(keys.Get("deviceID"))
+	if err != nil {
+		response(w, "Invalid device ID", fmt.Errorf("invalid deviceID"), nil, http.StatusBadRequest)
+		return
+	}
+
+	go m.measurementService.Monitor(r.Context(), deviceID, keys.Get("duration"), sensorGroupsWithSysFiles, valueCfg, errChan, metricChan, done)
 
 	for {
 		select {
-		case err := <-err:
+		case err := <-errChan:
 			if err != nil {
 				metric := <-metricChan
 				response(w, "Monitoring finished", err, metric, http.StatusOK)

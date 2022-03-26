@@ -20,8 +20,8 @@ type cpuUsageSensor struct {
 	cpuUsage     string
 	cpuCores     string
 	cpuFrequency string
-	deviceID     string
-	sensors      []sensor
+	deviceID     int32
+	sensors      []Sensor
 }
 
 // CreateUsageSensor creates instance of usage sensor.
@@ -41,7 +41,7 @@ func (usageS *cpuUsageSensor) ValidateUnit() error {
 	sensorLogger.Info("Validating usage sensor units...")
 	var err error
 
-	currentDeviceSensors, err := devices.getDeviceSensorsByGroup(usageSensor)
+	currentDeviceSensors, err := device.GetDeviceSensorsByGroup(usageSensor)
 	if err != nil {
 		return fmt.Errorf("failed to get current device sensors: %w", err)
 	}
@@ -53,7 +53,7 @@ func (usageS *cpuUsageSensor) ValidateUnit() error {
 			currentSensor.Unit != "%" &&
 			currentSensor.Unit != "count" &&
 			currentSensor.Unit != "Hz" {
-			err = multierror.Append(err, fmt.Errorf("invalid temperature unit %q", currentSensor.Unit))
+			err = multierror.Append(err, fmt.Errorf("invalid cpu usage unit %q", currentSensor.Unit))
 		}
 	}
 
@@ -66,12 +66,12 @@ func (usageS *cpuUsageSensor) SetSysInfoFile(filepath string) {
 func getUsageMeasurements(ctx context.Context, format string) ([]Measurment, error) {
 	sensorLogger.Info("Getting usage sensor measurements...")
 
-	deviceID, err := devices.getDeviceID()
+	deviceID, err := device.GetDeviceID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get device id: %w", err)
 	}
 
-	sensors, err := devices.getDeviceSensorsByGroup(usageSensor)
+	sensors, err := device.GetDeviceSensorsByGroup(usageSensor)
 	if err != nil {
 		return nil, err
 	}

@@ -111,7 +111,11 @@ func getSensorGroupsWithSystemFile(sensorflag []string) map[string]string {
 
 func terminateForTotalDuration(ctx context.Context) error {
 	appTerminaitingDuration := time.After(getTotalDurationInSeconds())
-
+	device, err := loadDeviceConfig()
+	if err != nil {
+		return err
+	}
+	sensor.SetDevice(device)
 	for {
 		select {
 		case <-ctx.Done():
@@ -138,7 +142,6 @@ func terminateForTotalDuration(ctx context.Context) error {
 
 func getMultipleSensorsMeasurements(ctx context.Context, groups map[string]string) ([]sensor.Measurment, error) {
 	var multipleSensorsData []sensor.Measurment
-
 	for group, sysFile := range groups {
 
 		var currentSensorGroupData []sensor.Measurment

@@ -1,6 +1,7 @@
 package sensor
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/Todorov99/sensorcli/pkg/util"
@@ -14,8 +15,9 @@ type Measurment struct {
 	DeviceID   string    `json:"deviceId" yaml:"deviceId"`
 }
 
-func newMeasurement(value string, sensorID string, deviceID string) Measurment {
-	return Measurment{time.Now(), value, sensorID, deviceID}
+func newMeasurement(value string, sensorID int32, deviceID int32) Measurment {
+
+	return Measurment{time.Now(), value, strconv.FormatInt(int64(sensorID), 10), strconv.FormatInt(int64(deviceID), 10)}
 }
 
 func newMeasurements(info interface{}) []Measurment {
