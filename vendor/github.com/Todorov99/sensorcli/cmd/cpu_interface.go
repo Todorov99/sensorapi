@@ -34,6 +34,7 @@ func (c *cpuSensor) GetMeasurements(ctx context.Context, device interface{}) ([]
 	}
 
 	sensor.SetDevice(d)
+
 	return getMultipleSensorsMeasurements(ctx, c.groups)
 }
 

@@ -10,6 +10,7 @@ import (
 
 	sensorcmd "github.com/Todorov99/sensorcli/cmd"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
+	"github.com/Todorov99/sensorcli/pkg/writer"
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/entity"
 	"github.com/Todorov99/server/pkg/global"
@@ -18,7 +19,8 @@ import (
 )
 
 type MeasurementService interface {
-	Monitor(ctx context.Context, deviceID int, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, err chan error, response chan interface{}, done chan bool)
+	Monitor(ctx context.Context, deviceID int, duration, deltaDuration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, generateReport bool) (<-chan bool, error)
+	GetMonitorStatus() dto.MonitorStatus
 	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
 	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
@@ -31,6 +33,15 @@ type measurementService struct {
 	sensorRepository      repository.SensorRepository
 }
 
+type monitorState struct {
+	startTime           time.Time
+	done                bool
+	monitorError        error
+	reportFile          string
+	measurements        []sensor.Measurment
+	criticalMeasurement sensor.Measurment
+}
+
 func NewMeasurementService() MeasurementService {
 	return &measurementService{
 		measurementRepository: repository.NewMeasurementRepository(),
@@ -39,59 +50,117 @@ func NewMeasurementService() MeasurementService {
 	}
 }
 
-func (m measurementService) Monitor(ctx context.Context, deviceID int, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
-	defer func() {
-		close(errChan)
-		close(response)
-		close(done)
-	}()
+var monState monitorState
+
+func (m measurementService) Monitor(ctx context.Context, deviceID int, duration, deltaDuration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, generateReport bool) (<-chan bool, error) {
+	done := make(chan bool)
+	monState = monitorState{}
+	monState.startTime = time.Now()
 
 	device, err := m.deviceRepository.GetByID(ctx, deviceID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
-			errChan <- fmt.Errorf("device with ID: %d does not exist", deviceID)
-			return
+			return nil, fmt.Errorf("device with ID: %d does not exist", deviceID)
 		}
-		response <- nil
-		errChan <- err
-		return
+		return nil, err
 	}
 
 	d, err := time.ParseDuration(duration)
 	if err != nil {
-		response <- nil
-		errChan <- err
-		return
+		return nil, err
 	}
 
 	monitorDuration := time.After(d)
 	cpu := sensorcmd.NewCpu(sensorGroup)
+	reportFilename := "measurement" + time.Now().Format("2006-01-02-15:04:05") + ".xlsx"
+	reportWriter := writer.New(reportFilename)
+	dDuration, err := time.ParseDuration(deltaDuration)
+	if err != nil {
+		return nil, err
+	}
 
-	for {
-		select {
-		case <-monitorDuration:
-			errChan <- nil
-			done <- true
-			return
-		case <-ctx.Done():
-			errChan <- err
-			return
-		default:
-			measurements, err := cpu.GetMeasurements(ctx, device)
-			if err != nil {
-				errChan <- err
+	t := time.NewTicker(dDuration)
+
+	go func() {
+		defer func() {
+			close(done)
+		}()
+
+		for {
+			select {
+			case <-monitorDuration:
+				if generateReport {
+					monState.reportFile = reportFilename
+				}
+
+				done <- true
+				monState.done = true
 				return
-			}
-
-			metric, err := m.scanMetrics(ctx, measurements, valueCfg, true)
-			if err != nil {
-				errChan <- err
-				response <- metric
+			case <-ctx.Done():
+				monState.monitorError = ctx.Err()
+				monState.done = true
 				return
-			}
+			case <-t.C:
+				serviceLogger.Debug("Getting sensor measurements...")
+				measurements, err := cpu.GetMeasurements(ctx, device)
+				if err != nil {
+					monState.monitorError = err
+					monState.done = true
+					done <- true
+					return
+				}
 
-			response <- measurements
+				metric, err := m.scanMetrics(ctx, measurements, valueCfg, true)
+				if err != nil {
+					monState.monitorError = err
+					monState.done = true
+					monState.criticalMeasurement = metric
+
+					done <- true
+					return
+				}
+
+				go func() {
+					if generateReport {
+						err := reportWriter.WritoToXslx(measurements)
+						if err != nil {
+							monState.monitorError = err
+							monState.done = true
+
+							done <- true
+							return
+						}
+					}
+				}()
+
+				monState.measurements = append(monState.measurements, measurements...)
+			}
 		}
+	}()
+
+	return done, nil
+}
+
+func (m measurementService) GetMonitorStatus() dto.MonitorStatus {
+	if !monState.done {
+		return dto.MonitorStatus{
+			Status:       "In progress",
+			Measurements: monState.measurements,
+		}
+	}
+
+	if monState.done && monState.monitorError != nil {
+		return dto.MonitorStatus{
+			Status: "Finished with error",
+			Error:  monState.monitorError.Error(),
+		}
+	}
+
+	return dto.MonitorStatus{
+		StartTime:    monState.startTime,
+		Status:       "Monitoring finished successfully",
+		Measurements: monState.measurements,
+		ReportFile:   monState.reportFile,
 	}
 }
 
@@ -148,7 +217,7 @@ func (m measurementService) AddMeasurements(ctx context.Context, measurement dto
 	return m.measurementRepository.Add(ctx, measurementEntity)
 }
 
-func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) (interface{}, error) {
+func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) (sensor.Measurment, error) {
 	for _, metr := range metrics {
 		if addToDb {
 			measurementEntity := entity.Measurement{
@@ -160,7 +229,7 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 
 			err := m.measurementRepository.Add(ctx, measurementEntity)
 			if err != nil {
-				return nil, err
+				return sensor.Measurment{}, err
 			}
 		}
 
@@ -198,7 +267,7 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 			continue
 		}
 	}
-	return nil, nil
+	return sensor.Measurment{}, nil
 }
 
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.

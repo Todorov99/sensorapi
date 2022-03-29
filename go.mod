@@ -3,7 +3,7 @@ module github.com/Todorov99/server
 go 1.17
 
 require (
-	github.com/Todorov99/sensorcli v0.0.0-20220326101250-d5c416c4c694
+	github.com/Todorov99/sensorcli v0.0.0-20220326221800-117f3cf73015
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040
@@ -12,7 +12,15 @@ require (
 	github.com/mitchellh/mapstructure v1.4.3
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.10.1
-	golang.org/x/crypto v0.0.0-20211108221036-ceb1ce70b4fa
+	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
+)
+
+require (
+	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
+	github.com/richardlehane/mscfb v1.0.4 // indirect
+	github.com/richardlehane/msoleps v1.0.1 // indirect
+	github.com/xuri/efp v0.0.0-20220216053911-6d8731f62184 // indirect
+	github.com/xuri/excelize/v2 v2.5.0 // indirect
 )
 
 require (
@@ -41,7 +49,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/net v0.0.0-20220325170049-de3da57026de // indirect
 	golang.org/x/sys v0.0.0-20220325203850-36772127a21f // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect

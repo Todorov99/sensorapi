@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 
@@ -124,10 +125,6 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	metricChan := make(chan interface{})
-	errChan := make(chan error)
-	done := make(chan bool)
-
 	sensorGroupsWithSysFiles := map[string]string{
 		global.CpuTempGroup:  keys.Get("tempSysFile"),
 		global.CpuUsageGroup: "",
@@ -140,23 +137,41 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	go m.measurementService.Monitor(r.Context(), deviceID, keys.Get("duration"), sensorGroupsWithSysFiles, valueCfg, errChan, metricChan, done)
+	generateReport, err := strconv.ParseBool(keys.Get("generateReport"))
+	if err != nil {
+		response(w, "Invalid boolean", err, nil, http.StatusBadRequest)
+		return
+	}
+
+	done, err := m.measurementService.Monitor(r.Context(), deviceID, keys.Get("duration"), keys.Get("deltaDuration"), sensorGroupsWithSysFiles, valueCfg, generateReport)
+	if err != nil {
+		response(w, "Starting the monitoring process failed", err, nil, http.StatusBadRequest)
+		return
+	}
 
 	for {
 		select {
-		case err := <-errChan:
-			if err != nil {
-				metric := <-metricChan
-				response(w, "Monitoring finished", err, metric, http.StatusOK)
-				return
-			}
 		case <-done:
-			response(w, "Monitoring finished", nil, nil, http.StatusOK)
+			response(w, "Monitoring finished", nil, "Monitoring finished successfully", http.StatusOK)
 			return
-		case rs := <-metricChan:
-			response(w, "Monitoring...", nil, rs, http.StatusOK)
 		case <-r.Context().Done():
 			response(w, "Monitoring finished with error", r.Context().Err(), nil, http.StatusConflict)
+			return
 		}
 	}
+}
+
+func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Request) {
+	monitorStatus := m.measurementService.GetMonitorStatus()
+	response(w, "Getting monitor status...", nil, monitorStatus, http.StatusAccepted)
+}
+
+func (m *measurementController) GetReportFile(w http.ResponseWriter, r *http.Request) {
+	keys := r.URL.Query()
+	filename := keys.Get("reportFilename")
+	cd := mime.FormatMediaType("attachment", map[string]string{"filename": filename})
+
+	w.Header().Add("Content-Disposition", cd)
+	w.Header().Add("Content-Type", "application/octet-stream")
+	http.ServeFile(w, r, filename)
 }
