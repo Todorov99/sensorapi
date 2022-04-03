@@ -30,8 +30,6 @@ CREATE TABLE sensor (
    CONSTRAINT sensor_id PRIMARY KEY (id)
 );
 
-
-
 INSERT INTO device(
 	name, description)
 	VALUES ('device_name', 'my laptop device');
@@ -48,37 +46,35 @@ INSERT INTO sensor_groups(
 	group_name)
 	VALUES ('MEMORY_USAGE');
 
-
+INSERT INTO sensor(
+	 name, description, unit, device_id, sensor_groups_id)
+	VALUES ('cpuTemperature', 'Measures CPU temperature in provided unit', 'C', '1', '1');
 
 INSERT INTO sensor(
 	 name, description, unit, device_id, sensor_groups_id)
-	VALUES ('cpuTempCelsius', 'Measures CPU temp Celsius', 'C', '1', '1');
+	VALUES ('cpuUsagePercentage', 'Measures CPU usage in percentages', '%', '1', '2');
 
 INSERT INTO sensor(
 	 name, description, unit, device_id, sensor_groups_id)
-	VALUES ('cpuUsagePercent', 'Measures CPU usage percent', '%', '1', '2');
+	VALUES ('cpuCores', 'Gets the number of CPU cores', 'count', '1', '2');
 
 INSERT INTO sensor(
 	 name, description, unit, device_id, sensor_groups_id)
-	VALUES ('cpuCoresCount', 'Measures CPU cores count', 'count', '1', '2');
+	VALUES ('cpuFrequency', 'Measures CPU frequency in a provided unit', 'GHz', '1', '2');
 
 INSERT INTO sensor(
 	 name, description, unit, device_id, sensor_groups_id)
-	VALUES ('cpuFrequency', 'Measures CPU frequency', 'GHz', '1', '2');
-
-INSERT INTO sensor(
-	 name, description, unit, device_id, sensor_groups_id)
-	VALUES ('memoryTotal', 'Measures memory total', 'GigaBytes', '1', '3');
+	VALUES ('memoryTotal', 'Measures memory total RAM', 'GigaBytes', '1', '3');
 
 INSERT INTO sensor(
 	name, description, unit, device_id, sensor_groups_id)
-	VALUES ('memoryAvailableBytes', 'Measures memory available Bytes', 'Bytes', '1', '3');
+	VALUES ('memoryAvailable', 'Gets the available RAM in a provided unit', 'Bytes', '1', '3');
 
 INSERT INTO sensor(
 	name, description, unit, device_id, sensor_groups_id)
-	VALUES ('memoryUsedBytes', 'Measures memory used Bytes', 'Bytes', '1', '3');
+	VALUES ('memoryUsed', 'Gets the used RAM from the programs in a provided unit', 'Bytes', '1', '3');
 
 INSERT INTO sensor(
 	 name, description, unit, device_id, sensor_groups_id)
-	VALUES ('memoryUsedPercent', 'Measures memory used percent', '%', '1', '3');    
+	VALUES ('memoryUsedPercentage', 'Used percentage RAM from the programs', '%', '1', '3');    
 

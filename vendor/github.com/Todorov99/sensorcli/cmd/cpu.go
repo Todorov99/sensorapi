@@ -32,12 +32,14 @@ import (
 )
 
 var (
-	format        string
-	deltaDuration int64
-	sensorGroups  []string
-	totalDuration float64
-	file          string
-	webHook       string
+	format         string
+	deltaDuration  int64
+	sensorGroups   []string
+	totalDuration  float64
+	file           string
+	webHook        string
+	generateReport bool
+	reportType     string
 )
 
 // cpuCmd represents the cpu command
@@ -88,6 +90,8 @@ func init() {
 	cpuCmd.Flags().StringVar(&file, "output_file", "", "Writing the output into CSV file.")
 	cpuCmd.Flags().Float64Var(&totalDuration, "total_duration", 60.0, "Terminating the whole program after specified duration")
 	cpuCmd.Flags().StringVar(&webHook, "web_hook_url", "", "Expose to current port.")
+	cpuCmd.Flags().StringVar(&reportType, "reportType", "xlsx", "The type of the report file that has to be generated")
+	cpuCmd.Flags().BoolVar(&generateReport, "generateReport", false, "generate xslx report file")
 
 	cpuCmd.Flags().StringSliceVar(&sensorGroups, "sensor_group", []string{""}, "There are three main sensor groups: CPU_TEMP, CPU_USAGE and MEMORY_USAGE. Each senosr group could have system file that will hold specific information")
 }
@@ -111,6 +115,13 @@ func getSensorGroupsWithSystemFile(sensorflag []string) map[string]string {
 
 func terminateForTotalDuration(ctx context.Context) error {
 	appTerminaitingDuration := time.After(getTotalDurationInSeconds())
+	device, err := loadDeviceConfig()
+	if err != nil {
+		return err
+	}
+	groups := getSensorGroupsWithSystemFile(sensorGroups)
+	cpu := NewCpu(groups)
+	reportWriter := writer.New("measurement_" + time.Now().Format(time.RFC3339) + "." + reportType)
 
 	for {
 		select {
@@ -120,14 +131,13 @@ func terminateForTotalDuration(ctx context.Context) error {
 		case <-appTerminaitingDuration:
 			return nil
 		default:
-
-			multipleSensorsData, err := getMultipleSensorsMeasurements(ctx, getSensorGroupsWithSystemFile(sensorGroups))
+			multipleSensorsData, err := cpu.GetMeasurements(ctx, device)
 			if err != nil {
 				cmdLogger.Error(err)
 				return err
 			}
 
-			err = getMeasurementsInDeltaDuration(ctx, multipleSensorsData, getDeltaDurationInSeconds())
+			err = getMeasurementsInDeltaDuration(ctx, reportWriter, generateReport, multipleSensorsData, getDeltaDurationInSeconds())
 			if err != nil {
 				return err
 			}
@@ -138,9 +148,7 @@ func terminateForTotalDuration(ctx context.Context) error {
 
 func getMultipleSensorsMeasurements(ctx context.Context, groups map[string]string) ([]sensor.Measurment, error) {
 	var multipleSensorsData []sensor.Measurment
-
 	for group, sysFile := range groups {
-
 		var currentSensorGroupData []sensor.Measurment
 
 		currentSensorGroupData, err := getSensorMeasurements(ctx, group, sysFile)
@@ -154,7 +162,7 @@ func getMultipleSensorsMeasurements(ctx context.Context, groups map[string]strin
 	return multipleSensorsData, nil
 }
 
-func getMeasurementsInDeltaDuration(ctx context.Context, sensorData []sensor.Measurment, deltaDuration time.Duration) error {
+func getMeasurementsInDeltaDuration(ctx context.Context, reportWriter writer.ReportWriter, generateReport bool, sensorData []sensor.Measurment, deltaDuration time.Duration) error {
 	cmdLogger.Info("Getting measurements in delta duration...")
 
 	measurementDuration := time.After(deltaDuration)
@@ -168,21 +176,29 @@ func getMeasurementsInDeltaDuration(ctx context.Context, sensorData []sensor.Mea
 	for {
 		select {
 		case data := <-sensorsData:
-
 			if webHook != "" {
 				go func() {
 					webHookURL(webHook, util.ParseDataAccordingToFormat("JSON", data))
 				}()
-
 			}
 
-			if file != "" {
+			if generateReport {
 				go func() {
-					var sensorsData []string
-					sensorsData = append(sensorsData, util.ParseDataAccordingToFormat(format, sensorData))
-					err := writer.WriteOutputToCSV(sensorsData, file)
-					if err != nil {
-						cmdLogger.Errorf("error during writing in CSV file: %w", err)
+
+					if reportType == "xlsx" {
+						err := reportWriter.WritoToXslx(sensorData)
+						if err != nil {
+							cmdLogger.Errorf("error during writing in XLSX file: %w", err)
+						}
+					}
+
+					if reportType == "csv" {
+						var sensorsData []string
+						sensorsData = append(sensorsData, util.ParseDataAccordingToFormat(format, data))
+						err := reportWriter.WriteOutputToCSV(sensorsData)
+						if err != nil {
+							cmdLogger.Errorf("error during writing in CSV file: %w", err)
+						}
 					}
 				}()
 			}

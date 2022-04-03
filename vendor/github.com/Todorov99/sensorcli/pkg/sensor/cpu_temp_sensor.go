@@ -18,8 +18,8 @@ const (
 
 type cpuTempSensor struct {
 	cpuTemp         string
-	deviceID        string
-	sensors         []sensor
+	deviceID        int32
+	sensors         []Sensor
 	thermalFilePath string
 }
 
@@ -56,7 +56,7 @@ func (tempS *cpuTempSensor) ValidateUnit() error {
 	sensorLogger.Info("Validating temperature sensor units...")
 	var err error
 
-	currentDeviceSensors, err := devices.getDeviceSensorsByGroup(tempSensor)
+	currentDeviceSensors, err := device.GetDeviceSensorsByGroup(tempSensor)
 	if err != nil {
 		return fmt.Errorf("failed to get current device sensors: %w", err)
 	}
@@ -74,18 +74,17 @@ func (tempS *cpuTempSensor) ValidateUnit() error {
 
 func (tempS *cpuTempSensor) getTempMeasurments(ctx context.Context, format string, filePath ...string) ([]Measurment, error) {
 	sensorLogger.Info("Getting temperature sensor measurements...")
-
 	cpuTempInfo, err := tempS.getTempFromSensor(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	deviceID, err := devices.getDeviceID()
+	deviceID, err := device.GetDeviceID()
 	if err != nil {
 		return nil, err
 	}
 
-	sensor, err := devices.getDeviceSensorsByGroup(tempSensor)
+	sensor, err := device.GetDeviceSensorsByGroup(tempSensor)
 	if err != nil {
 		return nil, err
 	}
@@ -93,25 +92,25 @@ func (tempS *cpuTempSensor) getTempMeasurments(ctx context.Context, format strin
 	cpuTempInfo.sensors = sensor
 	cpuTempInfo.deviceID = deviceID
 
-	return newMeasurements(cpuTempInfo), nil
+	return newMeasurements(cpuTempInfo)
 }
 
 func (tempS *cpuTempSensor) getTempFromSensor(ctx context.Context) (cpuTempSensor, error) {
 	sensorLogger.Info("Getting temperature from sensor")
 	tempSensor := cpuTempSensor{}
 
-	sensorTeperatureInfo, err := host.SensorsTemperaturesWithContext(ctx)
-	if err != nil {
-		return tempSensor, err
-	}
-
-	if len(sensorTeperatureInfo) == 0 {
+	if tempS.thermalFilePath != "" {
 		temp, err := readSysFile(tempS.thermalFilePath)
 		if err != nil {
 			return tempSensor, err
 		}
 		tempSensor.cpuTemp = temp
 		return tempSensor, nil
+	}
+
+	sensorTeperatureInfo, err := host.SensorsTemperaturesWithContext(ctx)
+	if err != nil {
+		return tempSensor, err
 	}
 
 	cpuTemp := sensorTeperatureInfo[0].Temperature

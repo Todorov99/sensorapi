@@ -6,4 +6,5 @@ type ValueCfg struct {
 	MemAvailableMax string `json:"memAvailableMaxValue,omitempty"`
 	CPUFrequencyMax string `json:"cpuFrequencyMaxValue,omitempty"`
 	MemUsedMax      string `json:"memUsedMaxValue,omitempty"`
+	MemUsedPercent  string `json:"memUsedPercent,omitempty"`
 }

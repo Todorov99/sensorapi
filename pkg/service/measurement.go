@@ -10,15 +10,18 @@ import (
 
 	sensorcmd "github.com/Todorov99/sensorcli/cmd"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
+	"github.com/Todorov99/sensorcli/pkg/writer"
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/entity"
 	"github.com/Todorov99/server/pkg/global"
 	"github.com/Todorov99/server/pkg/repository"
+	"github.com/hashicorp/go-multierror"
 	"github.com/mitchellh/mapstructure"
 )
 
 type MeasurementService interface {
-	Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, err chan error, response chan interface{}, done chan bool)
+	Monitor(ctx context.Context, deviceID int, duration, deltaDuration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, generateReport bool) (<-chan bool, error)
+	GetMonitorStatus() dto.MonitorStatus
 	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
 	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
@@ -31,6 +34,17 @@ type measurementService struct {
 	sensorRepository      repository.SensorRepository
 }
 
+type monitorState struct {
+	startTime             string
+	finishedAt            string
+	done                  bool
+	alreadyStartedProcess bool
+	monitorError          error
+	reportFile            string
+	measurements          []sensor.Measurment
+	criticalMeasurements  []sensor.Measurment
+}
+
 func NewMeasurementService() MeasurementService {
 	return &measurementService{
 		measurementRepository: repository.NewMeasurementRepository(),
@@ -39,48 +53,135 @@ func NewMeasurementService() MeasurementService {
 	}
 }
 
-func (m measurementService) Monitor(ctx context.Context, duration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, errChan chan error, response chan interface{}, done chan bool) {
-	defer func() {
-		close(errChan)
-		close(response)
-		close(done)
-	}()
+var monState monitorState
+
+func (m measurementService) Monitor(ctx context.Context, deviceID int, duration, deltaDuration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, generateReport bool) (<-chan bool, error) {
+	done := make(chan bool)
+	monState = monitorState{}
+	monState.alreadyStartedProcess = true
+	monState.startTime = time.Now().Format(time.RFC3339)
+
+	device, err := m.deviceRepository.GetByID(ctx, deviceID)
+	if err != nil {
+		if errors.Is(err, global.ErrorObjectNotFound) {
+			return nil, fmt.Errorf("device with ID: %d does not exist", deviceID)
+		}
+		return nil, err
+	}
 
 	d, err := time.ParseDuration(duration)
 	if err != nil {
-		response <- nil
-		errChan <- err
-		return
+		return nil, err
 	}
 
 	monitorDuration := time.After(d)
 	cpu := sensorcmd.NewCpu(sensorGroup)
+	reportFilename := "measurement" + time.Now().Format("2006-01-02-15:04:05") + ".xlsx"
+	reportWriter := writer.New(reportFilename)
+	dDuration, err := time.ParseDuration(deltaDuration)
+	if err != nil {
+		return nil, err
+	}
 
-	for {
-		select {
-		case <-monitorDuration:
-			errChan <- nil
-			done <- true
-			return
-		case <-ctx.Done():
-			errChan <- err
-			return
-		default:
-			measurements, err := cpu.GetMeasurements(ctx)
-			if err != nil {
-				errChan <- err
+	t := time.NewTicker(dDuration)
+
+	go func() {
+		defer func() {
+			close(done)
+		}()
+
+		for {
+			select {
+			case <-monitorDuration:
+				if generateReport {
+					monState.reportFile = reportFilename
+				}
+
+				done <- true
+				monState.done = true
+				monState.finishedAt = time.Now().Format(time.RFC3339)
 				return
-			}
-
-			metric, err := m.scanMetrics(ctx, measurements, valueCfg, true)
-			if err != nil {
-				errChan <- err
-				response <- metric
+			case <-ctx.Done():
+				monState.monitorError = ctx.Err()
+				monState.done = true
+				monState.finishedAt = time.Now().Format(time.RFC3339)
 				return
-			}
+			case <-t.C:
+				serviceLogger.Debug("Getting sensor measurements...")
+				measurements, err := cpu.GetMeasurements(ctx, device)
+				if err != nil {
+					monState.monitorError = err
+					monState.done = true
+					monState.finishedAt = time.Now().Format(time.RFC3339)
+					done <- true
+					return
+				}
 
-			response <- measurements
+				metric, err := m.scanMetrics(ctx, measurements, valueCfg, true)
+				if err != nil {
+					monState.monitorError = err
+					monState.done = true
+					monState.finishedAt = time.Now().Format(time.RFC3339)
+					monState.criticalMeasurements = metric
+
+					done <- true
+					return
+				}
+
+				if generateReport {
+					go func() {
+						err := reportWriter.WritoToXslx(measurements)
+						if err != nil {
+							monState.monitorError = err
+							monState.done = true
+
+							done <- true
+							return
+						}
+					}()
+				}
+
+				monState.measurements = append(monState.measurements, measurements...)
+			}
 		}
+	}()
+
+	return done, nil
+}
+
+func (m measurementService) GetMonitorStatus() dto.MonitorStatus {
+	if !monState.alreadyStartedProcess {
+		return dto.MonitorStatus{
+			Status: "Monitor process haven't been started yet",
+		}
+	}
+
+	if !monState.done {
+		return dto.MonitorStatus{
+			StartTime:    monState.startTime,
+			FinishedAt:   monState.finishedAt,
+			Status:       "In progress",
+			Measurements: monState.measurements,
+		}
+	}
+
+	if monState.done && monState.monitorError != nil {
+		return dto.MonitorStatus{
+			StartTime:           monState.startTime,
+			Status:              "Finished with error",
+			FinishedAt:          monState.finishedAt,
+			CriticalMeasurement: monState.criticalMeasurements,
+			Measurements:        monState.measurements,
+			Error:               monState.monitorError.Error(),
+		}
+	}
+
+	return dto.MonitorStatus{
+		StartTime:    monState.startTime,
+		FinishedAt:   monState.finishedAt,
+		Status:       "Monitoring finished successfully",
+		Measurements: monState.measurements,
+		ReportFile:   monState.reportFile,
 	}
 }
 
@@ -137,7 +238,9 @@ func (m measurementService) AddMeasurements(ctx context.Context, measurement dto
 	return m.measurementRepository.Add(ctx, measurementEntity)
 }
 
-func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) (interface{}, error) {
+func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) ([]sensor.Measurment, error) {
+	criticalMeasurements := []sensor.Measurment{}
+	var merr error
 	for _, metr := range metrics {
 		if addToDb {
 			measurementEntity := entity.Measurement{
@@ -156,30 +259,39 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 		switch metr.SensorID {
 		case global.TempSensor:
 			if metr.Value > valueCfg.TempMax {
-				return metr, fmt.Errorf("cpu temperature: %q is over than the expected maximum value of %q", metr.Value, valueCfg.TempMax)
+				criticalMeasurements = append(criticalMeasurements, metr)
+				merr = multierror.Append(merr, fmt.Errorf("cpu temperature: %q is over than the expected maximum value of %q", metr.Value, valueCfg.TempMax))
 			}
 			continue
 		case global.FrequencySensor:
 			if metr.Value > valueCfg.CPUFrequencyMax {
-				return metr, fmt.Errorf("cpu frequency: %q is over than the expected maximum value of %q", metr.Value, valueCfg.CPUFrequencyMax)
+				criticalMeasurements = append(criticalMeasurements, metr)
+				merr = multierror.Append(merr, fmt.Errorf("cpu frequency: %q is over than the expected maximum value of %q", metr.Value, valueCfg.CPUFrequencyMax))
 			}
 			continue
 		case global.UsageSensor:
 			if metr.Value > valueCfg.CPUUsageMax {
-				return metr, fmt.Errorf("cpu usage: %q is over than the expected maximum value of %q", metr.Value, valueCfg.CPUUsageMax)
+				criticalMeasurements = append(criticalMeasurements, metr)
+				merr = multierror.Append(merr, fmt.Errorf("cpu usage: %q is over than the expected maximum value of %q", metr.Value, valueCfg.CPUUsageMax))
 			}
 			continue
 		case global.MemoryAvailable:
 			if metr.Value > valueCfg.MemAvailableMax {
-				return metr, fmt.Errorf("the available memory: %q is over than the expected maximum value of %q", metr.Value, valueCfg.MemAvailableMax)
+				criticalMeasurements = append(criticalMeasurements, metr)
+				merr = multierror.Append(merr, fmt.Errorf("the available memory: %q is over than the expected maximum value of %q", metr.Value, valueCfg.MemAvailableMax))
 			}
 			continue
 		case global.MemoryUsed:
 			if metr.Value > valueCfg.MemUsedMax {
-				return metr, fmt.Errorf("the used memory: %q is over than the expected maximum value of %q", metr.Value, valueCfg.MemUsedMax)
+				criticalMeasurements = append(criticalMeasurements, metr)
+				merr = multierror.Append(merr, fmt.Errorf("the used memory: %q is over than the expected maximum value of %q", metr.Value, valueCfg.MemUsedMax))
 			}
 			continue
 		case global.MemoryUsedParcent:
+			if metr.Value > valueCfg.MemUsedPercent {
+				criticalMeasurements = append(criticalMeasurements, metr)
+				merr = multierror.Append(merr, fmt.Errorf("the used memory percentage: %q is over than the expected maximum value of %q", metr.Value, valueCfg.MemUsedPercent))
+			}
 			continue
 		case global.CoresSensor:
 			continue
@@ -187,7 +299,7 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 			continue
 		}
 	}
-	return nil, nil
+	return criticalMeasurements, merr
 }
 
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
