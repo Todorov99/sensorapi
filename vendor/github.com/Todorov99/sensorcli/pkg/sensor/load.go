@@ -5,21 +5,18 @@ import (
 )
 
 const (
-	cpuTemp           string = "cpuTemp"
+	cpuTemperature    string = "cpuTemperature"
 	cpuCores          string = "cpuCores"
-	cpuUsage          string = "cpuUsage"
+	cpuUsagePecentage string = "cpuUsagePercentage"
 	cpuFrequency      string = "cpuFrequency"
 	memoryTotal       string = "memoryTotal"
 	memoryAvailable   string = "memoryAvailable"
 	memoryUsed        string = "memoryUsed"
-	memoryUsedPercent string = "memoryUsedPercent"
+	memoryUsedPercent string = "memoryUsedPercentage"
 )
-
-//var modelFilePath string = "./device.yaml"
 
 var device *Device
 
-//var sensorLogger *logrus.Entry
 var sensorLogger = logger.NewLogrus("./sensor")
 
 func SetDevice(d *Device) {

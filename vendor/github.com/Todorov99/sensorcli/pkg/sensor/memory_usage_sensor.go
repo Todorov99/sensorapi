@@ -96,7 +96,7 @@ func getMemoryUsageData(ctx context.Context, format string) ([]Measurment, error
 	memoryUsageValues.sensors = sensors
 	memoryUsageValues.deviceID = deviceID
 
-	return newMeasurements(memoryUsageValues), nil
+	return newMeasurements(memoryUsageValues)
 }
 
 func getMemoryUsageValues(ctx context.Context) (cpuMemorySensor, error) {

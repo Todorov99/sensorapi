@@ -84,7 +84,7 @@ func getUsageMeasurements(ctx context.Context, format string) ([]Measurment, err
 	cpuInfo.deviceID = deviceID
 	cpuInfo.sensors = sensors
 
-	return newMeasurements(cpuInfo), nil
+	return newMeasurements(cpuInfo)
 }
 
 func newCPUUsageInfo(ctx context.Context) (cpuUsageSensor, error) {

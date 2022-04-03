@@ -1,6 +1,7 @@
 package sensor
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -16,11 +17,10 @@ type Measurment struct {
 }
 
 func newMeasurement(value string, sensorID int32, deviceID int32) Measurment {
-
 	return Measurment{time.Now(), value, strconv.FormatInt(int64(sensorID), 10), strconv.FormatInt(int64(deviceID), 10)}
 }
 
-func newMeasurements(info interface{}) []Measurment {
+func newMeasurements(info interface{}) ([]Measurment, error) {
 	var m = []Measurment{}
 	switch v := info.(type) {
 	case cpuUsageSensor:
@@ -30,10 +30,11 @@ func newMeasurements(info interface{}) []Measurment {
 				m = append(m, newMeasurement(v.cpuCores, s.ID, v.deviceID))
 			case cpuFrequency:
 				m = append(m, newMeasurement(v.cpuFrequency, s.ID, v.deviceID))
-			case cpuUsage:
+			case cpuUsagePecentage:
 				m = append(m, newMeasurement(v.cpuUsage, s.ID, v.deviceID))
+			default:
+				return nil, fmt.Errorf("invalid sensor name: %q", s.Name)
 			}
-
 		}
 	case cpuMemorySensor:
 		for _, s := range v.sensors {
@@ -62,22 +63,25 @@ func newMeasurements(info interface{}) []Measurment {
 					sensorLogger.Error(err)
 				}
 				m = append(m, newMeasurement(val, s.ID, v.deviceID))
+			default:
+				return nil, fmt.Errorf("invalid sensor name: %q", s.Name)
 			}
 
 		}
 	case cpuTempSensor:
 		for _, s := range v.sensors {
 			switch s.Name {
-			case cpuTemp:
+			case cpuTemperature:
 				val, err := util.ParseTempAccordingToUnit(s.Unit, v.cpuTemp)
 				if err != nil {
 					sensorLogger.Error(err)
 				}
 				m = append(m, newMeasurement(val, s.ID, v.deviceID))
+			default:
+				return nil, fmt.Errorf("invalid sensor name: %q", s.Name)
 			}
-
 		}
 	}
 
-	return m
+	return m, nil
 }
