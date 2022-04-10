@@ -74,9 +74,11 @@ func NewMeasurementService() MeasurementService {
 }
 
 func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan bool, error) {
+	m.logger.Debug("Starting monitoring...")
 	done := make(chan bool)
-
 	startTime := time.Now().Format("2006-01-02-15:04:05")
+	reportFilename := "measurement_" + startTime + ".xlsx"
+
 	monState = monitorState{}
 	monState.alreadyStartedProcess = true
 	monState.startTime = startTime
@@ -96,7 +98,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 
 	monitorDuration := time.After(d)
 	cpu := sensorcmd.NewCpu(cfg.SnsorGroups)
-	reportFilename := "measurement_" + startTime + ".xlsx"
+
 	reportWriter := writer.New(reportFilename)
 	dDuration, err := time.ParseDuration(cfg.DeltaDuration)
 	if err != nil {
@@ -106,7 +108,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 	t := time.NewTicker(dDuration)
 
 	reportSender := dto.MailSenderDto{
-		Subject: "Metric report",
+		Subject: "Measurement report",
 		To: []string{
 			"todor.mtodorov01@gmail.com",
 		},
@@ -152,7 +154,8 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 				metric, err := m.scanMetrics(ctx, measurements, cfg.CriticalMetricsCfg, true)
 				if err != nil {
 					var merr error
-					multierror.Append(merr, err)
+					merr = multierror.Append(merr, err)
+
 					monState.monitorError = merr
 					monState.done = true
 					monState.finishedAt = time.Now().Format(time.RFC3339)
@@ -163,7 +166,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 					criticalMetricReportWriter := writer.New(critMetricReportFilename)
 					err := criticalMetricReportWriter.WritoToXslx(metric)
 					if err != nil {
-						multierror.Append(merr, err)
+						merr = multierror.Append(merr, err)
 						monState.monitorError = merr
 
 						done <- true
@@ -175,14 +178,16 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 					}
 
 					if cfg.GenerateReport {
-						reportAttachments = append(reportAttachments, reportFilename)
+						if _, err := os.Stat(reportFilename); err == nil {
+							reportAttachments = append(reportAttachments, reportFilename)
+						}
 					}
 
 					reportSender.Body = "Critical measurements occurred during your monitor timeframe"
 
 					err = m.mailsenderClt.SendWithAttachments(ctx, reportSender, reportAttachments)
 					if err != nil {
-						m.logger.Warn("Failed sending email with critical measurement report")
+						m.logger.Warnf("Failed sending email with critical measurement report: %w", err)
 					}
 
 					done <- true
