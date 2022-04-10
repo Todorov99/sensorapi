@@ -23,6 +23,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	StateInProgress = "In progress"
+	StateFinished   = "Finished"
+	StateError      = "Error"
+)
+
 var monState monitorState
 
 type MeasurementService interface {
@@ -226,7 +232,7 @@ func (m measurementService) GetMonitorStatus() dto.MonitorStatus {
 		return dto.MonitorStatus{
 			StartTime:    monState.startTime,
 			FinishedAt:   monState.finishedAt,
-			Status:       "In progress",
+			Status:       StateInProgress,
 			Measurements: monState.measurements,
 		}
 	}
@@ -234,7 +240,7 @@ func (m measurementService) GetMonitorStatus() dto.MonitorStatus {
 	if monState.done && monState.monitorError != nil {
 		return dto.MonitorStatus{
 			StartTime:           monState.startTime,
-			Status:              "Finished with error",
+			Status:              StateError,
 			FinishedAt:          monState.finishedAt,
 			CriticalMeasurement: monState.criticalMeasurements,
 			Measurements:        monState.measurements,
@@ -245,7 +251,7 @@ func (m measurementService) GetMonitorStatus() dto.MonitorStatus {
 	return dto.MonitorStatus{
 		StartTime:    monState.startTime,
 		FinishedAt:   monState.finishedAt,
-		Status:       "Monitoring finished successfully",
+		Status:       StateFinished,
 		Measurements: monState.measurements,
 		ReportFile:   monState.reportFile,
 	}

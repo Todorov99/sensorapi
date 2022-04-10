@@ -116,6 +116,11 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		r.Body.Close()
 	}()
 
+	if m.measurementService.GetMonitorStatus().Status == service.StateInProgress {
+		response(w, "There is running measurement", fmt.Errorf("running process"), nil, http.StatusBadRequest)
+		return
+	}
+
 	keys := r.URL.Query()
 
 	valueCfg := dto.ValueCfg{}
