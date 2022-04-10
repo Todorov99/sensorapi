@@ -5,22 +5,28 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strconv"
 	"time"
 
 	sensorcmd "github.com/Todorov99/sensorcli/cmd"
+	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
 	"github.com/Todorov99/sensorcli/pkg/writer"
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/entity"
 	"github.com/Todorov99/server/pkg/global"
+	"github.com/Todorov99/server/pkg/mailsender"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/hashicorp/go-multierror"
 	"github.com/mitchellh/mapstructure"
+	"github.com/sirupsen/logrus"
 )
 
+var monState monitorState
+
 type MeasurementService interface {
-	Monitor(ctx context.Context, deviceID int, duration, deltaDuration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, generateReport bool) (<-chan bool, error)
+	Monitor(ctx context.Context, cfg MonitorCfg) (<-chan bool, error)
 	GetMonitorStatus() dto.MonitorStatus
 	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
@@ -29,9 +35,11 @@ type MeasurementService interface {
 }
 
 type measurementService struct {
+	logger                *logrus.Entry
 	measurementRepository repository.MeasurementRepository
 	deviceRepository      repository.DeviceRepository
 	sensorRepository      repository.SensorRepository
+	mailsenderClt         *mailsender.Client
 }
 
 type monitorState struct {
@@ -45,45 +53,64 @@ type monitorState struct {
 	criticalMeasurements  []sensor.Measurment
 }
 
+type MonitorCfg struct {
+	DeviceID           int
+	Duration           string
+	DeltaDuration      string
+	SnsorGroups        map[string]string
+	CriticalMetricsCfg dto.ValueCfg
+	GenerateReport     bool
+	SendReport         bool
+}
+
 func NewMeasurementService() MeasurementService {
 	return &measurementService{
+		logger:                logger.NewLogrus("measurementService", os.Stdout),
 		measurementRepository: repository.NewMeasurementRepository(),
 		sensorRepository:      repository.NewSensorRepository(),
 		deviceRepository:      repository.NewDeviceRepository(),
+		mailsenderClt:         mailsender.New(),
 	}
 }
 
-var monState monitorState
-
-func (m measurementService) Monitor(ctx context.Context, deviceID int, duration, deltaDuration string, sensorGroup map[string]string, valueCfg dto.ValueCfg, generateReport bool) (<-chan bool, error) {
+func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan bool, error) {
 	done := make(chan bool)
+
+	startTime := time.Now().Format("2006-01-02-15:04:05")
 	monState = monitorState{}
 	monState.alreadyStartedProcess = true
-	monState.startTime = time.Now().Format(time.RFC3339)
+	monState.startTime = startTime
 
-	device, err := m.deviceRepository.GetByID(ctx, deviceID)
+	device, err := m.deviceRepository.GetByID(ctx, cfg.DeviceID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
-			return nil, fmt.Errorf("device with ID: %d does not exist", deviceID)
+			return nil, fmt.Errorf("device with ID: %d does not exist", cfg.DeviceID)
 		}
 		return nil, err
 	}
 
-	d, err := time.ParseDuration(duration)
+	d, err := time.ParseDuration(cfg.Duration)
 	if err != nil {
 		return nil, err
 	}
 
 	monitorDuration := time.After(d)
-	cpu := sensorcmd.NewCpu(sensorGroup)
-	reportFilename := "measurement" + time.Now().Format("2006-01-02-15:04:05") + ".xlsx"
+	cpu := sensorcmd.NewCpu(cfg.SnsorGroups)
+	reportFilename := "measurement_" + startTime + ".xlsx"
 	reportWriter := writer.New(reportFilename)
-	dDuration, err := time.ParseDuration(deltaDuration)
+	dDuration, err := time.ParseDuration(cfg.DeltaDuration)
 	if err != nil {
 		return nil, err
 	}
 
 	t := time.NewTicker(dDuration)
+
+	reportSender := dto.MailSenderDto{
+		Subject: "Metric report",
+		To: []string{
+			"todor.mtodorov01@gmail.com",
+		},
+	}
 
 	go func() {
 		defer func() {
@@ -93,8 +120,13 @@ func (m measurementService) Monitor(ctx context.Context, deviceID int, duration,
 		for {
 			select {
 			case <-monitorDuration:
-				if generateReport {
+				if cfg.GenerateReport {
 					monState.reportFile = reportFilename
+				}
+
+				if cfg.SendReport {
+					reportSender.Body = "Your measurements finished successfully without any critical measurements"
+					m.mailsenderClt.SendWithAttachments(ctx, reportSender, []string{reportFilename})
 				}
 
 				done <- true
@@ -107,7 +139,7 @@ func (m measurementService) Monitor(ctx context.Context, deviceID int, duration,
 				monState.finishedAt = time.Now().Format(time.RFC3339)
 				return
 			case <-t.C:
-				serviceLogger.Debug("Getting sensor measurements...")
+				m.logger.Debug("Getting sensor measurements...")
 				measurements, err := cpu.GetMeasurements(ctx, device)
 				if err != nil {
 					monState.monitorError = err
@@ -117,18 +149,47 @@ func (m measurementService) Monitor(ctx context.Context, deviceID int, duration,
 					return
 				}
 
-				metric, err := m.scanMetrics(ctx, measurements, valueCfg, true)
+				metric, err := m.scanMetrics(ctx, measurements, cfg.CriticalMetricsCfg, true)
 				if err != nil {
-					monState.monitorError = err
+					var merr error
+					multierror.Append(merr, err)
+					monState.monitorError = merr
 					monState.done = true
 					monState.finishedAt = time.Now().Format(time.RFC3339)
 					monState.criticalMeasurements = metric
+
+					critMetricReportFilename := "critical_metrics_from_" + startTime
+
+					criticalMetricReportWriter := writer.New(critMetricReportFilename)
+					err := criticalMetricReportWriter.WritoToXslx(metric)
+					if err != nil {
+						multierror.Append(merr, err)
+						monState.monitorError = merr
+
+						done <- true
+						return
+					}
+
+					reportAttachments := []string{
+						critMetricReportFilename,
+					}
+
+					if cfg.GenerateReport {
+						reportAttachments = append(reportAttachments, reportFilename)
+					}
+
+					reportSender.Body = "Critical measurements occurred during your monitor timeframe"
+
+					err = m.mailsenderClt.SendWithAttachments(ctx, reportSender, reportAttachments)
+					if err != nil {
+						m.logger.Warn("Failed sending email with critical measurement report")
+					}
 
 					done <- true
 					return
 				}
 
-				if generateReport {
+				if cfg.GenerateReport {
 					go func() {
 						err := reportWriter.WritoToXslx(measurements)
 						if err != nil {
@@ -304,12 +365,12 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
 func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error) {
-	serviceLogger.Info("Getting correlation coficient...")
+	m.logger.Info("Getting correlation coficient...")
 	err := m.ifDeviceAndSensorExists(context.Background(), deviceID1, sensorID1)
 	if err != nil {
 		return 0, err
 	}
-	serviceLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID1, sensorID1)
+	m.logger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID1, sensorID1)
 	firstSensorValues, err := m.measurementRepository.
 		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
 			ctx, startTime, endTime, deviceID1, sensorID1)
@@ -317,7 +378,7 @@ func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context
 		return 0, err
 	}
 
-	serviceLogger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID2, sensorID2)
+	m.logger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID2, sensorID2)
 	secondSensorValues, err := m.measurementRepository.
 		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
 			ctx, startTime, endTime, deviceID2, sensorID2)
@@ -325,7 +386,7 @@ func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context
 		return 0, err
 	}
 
-	serviceLogger.Info("Getting the count of values...")
+	m.logger.Info("Getting the count of values...")
 	countOfMeasurements, err := m.measurementRepository.
 		CountMeasurementsBetweenTimestampByDeviceIDBySensorID(
 			ctx, startTime, endTime, deviceID1, sensorID1,

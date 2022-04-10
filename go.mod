@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/Todorov99/sensorcli v0.0.0-20220403122718-196145993b9c
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.0
 	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040
 	github.com/lib/pq v1.10.2

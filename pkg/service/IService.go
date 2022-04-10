@@ -2,12 +2,7 @@ package service
 
 import (
 	"context"
-	"os"
-
-	"github.com/Todorov99/sensorcli/pkg/logger"
 )
-
-var serviceLogger = logger.NewLogrus("service", os.Stdout)
 
 type IService interface {
 	GetAll(ctx context.Context) (interface{}, error)
