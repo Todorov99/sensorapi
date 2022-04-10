@@ -161,7 +161,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 					monState.finishedAt = time.Now().Format(time.RFC3339)
 					monState.criticalMeasurements = metric
 
-					critMetricReportFilename := "critical_metrics_from_" + startTime
+					critMetricReportFilename := "critical_metrics_from_" + startTime + ".xlsx"
 
 					criticalMetricReportWriter := writer.New(critMetricReportFilename)
 					err := criticalMetricReportWriter.WritoToXslx(metric)
