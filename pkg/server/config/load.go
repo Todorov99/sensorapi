@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	_ "github.com/lib/pq"
@@ -31,4 +32,14 @@ func LoadApplicationProperties(propsFile string) (*ApplicationProperties, error)
 	}
 	configLogger.Debug("Property file successfully loaded")
 	return appPropersties, nil
+}
+
+func getEnv(str string) string {
+	if strings.HasPrefix(str, "${") {
+		strTrimmed := strings.TrimPrefix(str, "${")
+		strTrimmed = strings.TrimSuffix(strTrimmed, "}")
+		str = os.Getenv(strTrimmed)
+	}
+
+	return str
 }

@@ -13,6 +13,9 @@ postgresdb:
   serviceName: localhost
   sslmode: disable
   port: "5432"
+mailsender:
+  serviceName: localhost
+  port: ${PORT}
 authorization:
   JWT:
     jwtAudienceSecret: audSecret

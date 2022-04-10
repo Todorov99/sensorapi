@@ -11,6 +11,7 @@ import (
 
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/Todorov99/server/pkg/dto"
+	"github.com/Todorov99/server/pkg/server/config"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -23,10 +24,8 @@ type Client struct {
 func New() *Client {
 	mailsenderLogger.Debugf("Initializing mail sender client...")
 
-	// config.G
-	// servicePort := os.Getenv("PORT")
 	resty := resty.New().
-		SetBaseURL("http://localhost:8083")
+		SetBaseURL(fmt.Sprintf("http://%s:%s", config.GetMailSenderCfg().GetServiceName(), config.GetMailSenderCfg().GetPort()))
 
 	return &Client{
 		restyClient: resty,

@@ -8,14 +8,14 @@ import (
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
 
-type DatabaseCfg struct {
+type databaseCfg struct {
 	influxDbClient influxdb2.Client
 	influxOrg      string
 	influxBucket   string
 	postreDbClient *sql.DB
 }
 
-func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*DatabaseCfg, error) {
+func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*databaseCfg, error) {
 	configLogger.Debug("Getting databaseClients...")
 
 	vault, err := vault.New(applicationProperties.VaultType)
@@ -24,7 +24,7 @@ func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*DatabaseCfg,
 	}
 
 	configLogger.Debug("Initializing influx db 2.0 client")
-	influxAddress := fmt.Sprintf("http://%s:%s/", applicationProperties.InfluxProps.ServiceName, applicationProperties.InfluxProps.Port)
+	influxAddress := fmt.Sprintf("http://%s:%s/", applicationProperties.InfluxProps.ServiceName, getEnv(applicationProperties.InfluxProps.Port))
 	tokenSecret, err := vault.Get(applicationProperties.InfluxProps.TokenSecret)
 	if err != nil {
 		return nil, err
@@ -39,7 +39,7 @@ func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*DatabaseCfg,
 	}
 
 	postgreConnectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		postgreSecret.Name, postgreSecret.Value, applicationProperties.PostgreProps.ServiceName, applicationProperties.PostgreProps.Port, applicationProperties.PostgreProps.DatabaseName, applicationProperties.PostgreProps.SSLMode)
+		postgreSecret.Name, postgreSecret.Value, applicationProperties.PostgreProps.ServiceName, getEnv(applicationProperties.PostgreProps.Port), applicationProperties.PostgreProps.DatabaseName, applicationProperties.PostgreProps.SSLMode)
 	postgreClient, err := sql.Open("postgres", postgreConnectionString)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*DatabaseCfg,
 	}
 
 	configLogger.Debug("Database Config successfully initialized")
-	return &DatabaseCfg{
+	return &databaseCfg{
 		influxDbClient: influxdbClient,
 		influxOrg:      applicationProperties.InfluxProps.Org,
 		influxBucket:   applicationProperties.InfluxProps.Bucket,
@@ -59,18 +59,18 @@ func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*DatabaseCfg,
 	}, nil
 }
 
-func (d *DatabaseCfg) GetInfluxClient() influxdb2.Client {
+func (d *databaseCfg) GetInfluxClient() influxdb2.Client {
 	return d.influxDbClient
 }
 
-func (d *DatabaseCfg) GetPostgreClient() *sql.DB {
+func (d *databaseCfg) GetPostgreClient() *sql.DB {
 	return d.postreDbClient
 }
 
-func (d *DatabaseCfg) GetInfluxOrg() string {
+func (d *databaseCfg) GetInfluxOrg() string {
 	return d.influxOrg
 }
 
-func (d *DatabaseCfg) GetInfluxBucket() string {
+func (d *databaseCfg) GetInfluxBucket() string {
 	return d.influxBucket
 }
