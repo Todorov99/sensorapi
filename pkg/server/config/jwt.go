@@ -9,7 +9,7 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-type JWTCfg struct {
+type jwtCfg struct {
 	jwtAudSecret        string
 	jwtIssSecret        string
 	jwtSigningKeySecret string
@@ -17,7 +17,7 @@ type JWTCfg struct {
 	jwtExpTime          time.Duration
 }
 
-func NewJWTCfg(applicationProperties *ApplicationProperties) (*JWTCfg, error) {
+func NewJWTCfg(applicationProperties *ApplicationProperties) (*jwtCfg, error) {
 	configLogger.Debug("Initializing JWT config...")
 	vault, err := vault.New(applicationProperties.VaultType)
 	if err != nil {
@@ -31,7 +31,7 @@ func NewJWTCfg(applicationProperties *ApplicationProperties) (*JWTCfg, error) {
 	}
 
 	configLogger.Debug("Initializing JWT config finished successfully")
-	return &JWTCfg{
+	return &jwtCfg{
 		jwtAudSecret:        jwtAuthProps.JWTAudienceSecret,
 		jwtIssSecret:        jwtAuthProps.JWTIssuerSecret,
 		jwtSigningKeySecret: jwtAuthProps.JWTSigningKey,
@@ -40,7 +40,7 @@ func NewJWTCfg(applicationProperties *ApplicationProperties) (*JWTCfg, error) {
 	}, nil
 }
 
-func (j *JWTCfg) GenerateJWT(userEntity entity.User) (string, error) {
+func (j *jwtCfg) GenerateJWT(userEntity entity.User) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 
@@ -75,7 +75,7 @@ func (j *JWTCfg) GenerateJWT(userEntity entity.User) (string, error) {
 	return tokenString, nil
 }
 
-func (j *JWTCfg) GetJWTAudience() string {
+func (j *jwtCfg) GetJWTAudience() string {
 	audSecret, err := j.secretVault.Get(j.jwtAudSecret)
 	if err != nil {
 		return ""
@@ -83,7 +83,7 @@ func (j *JWTCfg) GetJWTAudience() string {
 	return audSecret.Value
 }
 
-func (j *JWTCfg) GetJWTSigningKey() []byte {
+func (j *jwtCfg) GetJWTSigningKey() []byte {
 	signingKeySecret, err := j.secretVault.Get(j.jwtSigningKeySecret)
 	if err != nil {
 		return nil
@@ -91,7 +91,7 @@ func (j *JWTCfg) GetJWTSigningKey() []byte {
 	return []byte(signingKeySecret.Value)
 }
 
-func (j *JWTCfg) GetJWTIssuer() string {
+func (j *jwtCfg) GetJWTIssuer() string {
 	issSecret, err := j.secretVault.Get(j.jwtIssSecret)
 	if err != nil {
 		return ""
@@ -99,11 +99,11 @@ func (j *JWTCfg) GetJWTIssuer() string {
 	return issSecret.Value
 }
 
-func (j *JWTCfg) GetJWTExpTimeDuration() time.Duration {
+func (j *jwtCfg) GetJWTExpTimeDuration() time.Duration {
 	return j.jwtExpTime
 }
 
-func (j *JWTCfg) RenewSigningKey(signKeySecret vault.Secret) error {
+func (j *jwtCfg) RenewSigningKey(signKeySecret vault.Secret) error {
 	configLogger.Debug("Renewing the JWT signing key...")
 	err := j.secretVault.Store(signKeySecret)
 	if err != nil {

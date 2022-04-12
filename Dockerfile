@@ -1,16 +1,19 @@
 FROM golang:1.17 as builder
 
-WORKDIR /server
-COPY . /server
+WORKDIR /sensorapi
+COPY . /sensorapi
 
-RUN export CGO_ENABLED=0 && go build -o server ./
+RUN export CGO_ENABLED=0 && go build -o sensorapi ./
 
 FROM alpine:3.15
 RUN apk update && apk add --no-cache bash
-COPY --from=builder /server /server
+COPY --from=builder /sensorapi /sensorapi
 
 VOLUME "/var/lib/server"
 
-EXPOSE 8081/tcp
-WORKDIR /server
-ENTRYPOINT ["./server", "start", "-p", "8081"]
+ENV PORT 8081
+
+EXPOSE ${PORT}/tcp
+
+WORKDIR /sensorapi
+ENTRYPOINT ["./sensorapi", "start"]

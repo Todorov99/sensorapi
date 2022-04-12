@@ -4,26 +4,31 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
+	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/entity"
 	"github.com/Todorov99/server/pkg/global"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/mitchellh/mapstructure"
+	"github.com/sirupsen/logrus"
 )
 
 type deviceService struct {
+	logger           *logrus.Entry
 	deviceRepository repository.DeviceRepository
 }
 
 func NewDeviceService() IService {
 	return &deviceService{
+		logger:           logger.NewLogrus("deviceService", os.Stdout),
 		deviceRepository: repository.NewDeviceRepository(),
 	}
 }
 
 func (d *deviceService) GetAll(ctx context.Context) (interface{}, error) {
-	serviceLogger.Debug("Getting all devices")
+	d.logger.Debug("Getting all devices")
 	devices, err := d.deviceRepository.GetAll(ctx)
 	if err != nil {
 		return nil, err
@@ -81,7 +86,7 @@ func (d *deviceService) Update(ctx context.Context, model interface{}) error {
 	if err != nil {
 		return err
 	}
-	serviceLogger.Debugf("Updating device with ID: %d", device.ID)
+	d.logger.Debugf("Updating device with ID: %d", device.ID)
 
 	_, err = d.deviceRepository.GetByID(ctx, int(device.ID))
 	if err != nil {

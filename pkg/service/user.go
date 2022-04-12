@@ -4,13 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
+	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/Todorov99/server/pkg/dto"
 	"github.com/Todorov99/server/pkg/entity"
 	"github.com/Todorov99/server/pkg/global"
 	"github.com/Todorov99/server/pkg/repository"
 	"github.com/Todorov99/server/pkg/server/config"
 	"github.com/mitchellh/mapstructure"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,17 +23,19 @@ type UserService interface {
 }
 
 type userService struct {
+	logger         *logrus.Entry
 	userRepository repository.UserRepository
 }
 
 func NewUserService() UserService {
 	return &userService{
+		logger:         logger.NewLogrus("userService", os.Stdout),
 		userRepository: repository.NewUserRepository(),
 	}
 }
 
 func (u *userService) Register(ctx context.Context, registerDto dto.Register) error {
-	serviceLogger.Debugf("Registering user with username: %q", registerDto.UserName)
+	u.logger.Debugf("Registering user with username: %q", registerDto.UserName)
 	_, err := u.userRepository.GetUserByUsername(ctx, registerDto.UserName)
 	if errors.Is(err, global.ErrorUserWithUsernameNotExist) {
 		passHash, err := getHash([]byte(registerDto.Password))

@@ -40,6 +40,7 @@ func HandleRequest(port string) error {
 
 	routes.Handle("/api/measurement", isAuthorized(measurementController.GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp)).Methods("GET")
 	routes.Handle("/api/measurement", isAuthorized(measurementController.AddMeasurement)).Methods("POST")
+
 	routes.Handle("/api/measurement/collect", isAuthorized(measurementController.Monitor)).Methods("POST")
 	routes.Handle("/api/measurement/average", isAuthorized(measurementController.GetSensorAverageValue)).Methods("GET")
 	routes.Handle("/api/measurement/correlation", isAuthorized(measurementController.GetSensorsCorrelationCoefficient)).Methods("GET")

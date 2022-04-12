@@ -1,10 +1,11 @@
 package config
 
 type ApplicationProperties struct {
-	InfluxProps   InfluxProperties  `yaml:"influxdb,omitempty"`
-	PostgreProps  PostgreProperties `yaml:"postgresdb,omitempty"`
-	Authorization Authorization     `yaml:"authorization,omitempty"`
-	VaultType     string            `yaml:"vaultType,omitempty"`
+	InfluxProps   InfluxProperties     `yaml:"influxdb,omitempty"`
+	PostgreProps  PostgreProperties    `yaml:"postgresdb,omitempty"`
+	Authorization Authorization        `yaml:"authorization,omitempty"`
+	MailSender    MailSenderProperties `yaml:"mailsender,omitempty"`
+	VaultType     string               `yaml:"vaultType,omitempty"`
 }
 
 type PostgreProperties struct {
@@ -22,6 +23,11 @@ type InfluxProperties struct {
 	Org          string `yaml:"org,omitempty"`
 	Bucket       string `yaml:"bucket,omitempty"`
 	Port         string `yaml:"port,omitempty"`
+}
+
+type MailSenderProperties struct {
+	ServiceName string `yaml:"serviceName,omitempty"`
+	Port        string `yaml:"port,omitempty"`
 }
 
 type Authorization struct {

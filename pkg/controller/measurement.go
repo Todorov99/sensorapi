@@ -116,6 +116,11 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		r.Body.Close()
 	}()
 
+	if m.measurementService.GetMonitorStatus().Status == service.StateInProgress {
+		response(w, "There is running measurement", fmt.Errorf("running process"), nil, http.StatusBadRequest)
+		return
+	}
+
 	keys := r.URL.Query()
 
 	valueCfg := dto.ValueCfg{}
@@ -143,7 +148,23 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	done, err := m.measurementService.Monitor(r.Context(), deviceID, keys.Get("duration"), keys.Get("deltaDuration"), sensorGroupsWithSysFiles, valueCfg, generateReport)
+	sendReport, err := strconv.ParseBool(keys.Get("sendReport"))
+	if err != nil {
+		response(w, "Invalid boolean", err, nil, http.StatusBadRequest)
+		return
+	}
+
+	monCfg := service.MonitorCfg{
+		DeviceID:           deviceID,
+		Duration:           keys.Get("duration"),
+		DeltaDuration:      keys.Get("deltaDuration"),
+		SnsorGroups:        sensorGroupsWithSysFiles,
+		CriticalMetricsCfg: valueCfg,
+		GenerateReport:     generateReport,
+		SendReport:         sendReport,
+	}
+
+	done, err := m.measurementService.Monitor(r.Context(), monCfg)
 	if err != nil {
 		response(w, "Starting the monitoring process failed", err, nil, http.StatusBadRequest)
 		return

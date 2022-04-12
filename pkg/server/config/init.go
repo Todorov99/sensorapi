@@ -7,8 +7,9 @@ import (
 var serverConfig *serverCfg
 
 type serverCfg struct {
-	databaseCfg *DatabaseCfg
-	jwtCfg      *JWTCfg
+	databaseCfg   *databaseCfg
+	jwtCfg        *jwtCfg
+	mailSenderCfg *mailSender
 }
 
 func init() {
@@ -28,17 +29,22 @@ func init() {
 	}
 
 	serverCfg := &serverCfg{
-		databaseCfg: dbCfg,
-		jwtCfg:      jwtConfig,
+		databaseCfg:   dbCfg,
+		jwtCfg:        jwtConfig,
+		mailSenderCfg: NewMailSender(applicationProperties),
 	}
 
 	serverConfig = serverCfg
 }
 
-func GetDatabaseCfg() *DatabaseCfg {
+func GetDatabaseCfg() *databaseCfg {
 	return serverConfig.databaseCfg
 }
 
-func GetJWTCfg() *JWTCfg {
+func GetJWTCfg() *jwtCfg {
 	return serverConfig.jwtCfg
+}
+
+func GetMailSenderCfg() *mailSender {
+	return serverConfig.mailSenderCfg
 }

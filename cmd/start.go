@@ -16,6 +16,9 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/Todorov99/server/pkg/server"
 	_ "github.com/Todorov99/server/pkg/server/config"
 	"github.com/spf13/cobra"
@@ -25,17 +28,28 @@ var (
 	port string
 )
 
+const (
+	PORT_ENV = "PORT"
+)
+
 // startCmd represents the start command for starting the HTTP(S) Web Server
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start http web server",
 	Long:  `Start is command line that starts a http web server`,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if port == "" {
+			serverPort := os.Getenv(PORT_ENV)
+			if serverPort == "" {
+				return fmt.Errorf("server port has not been specified")
+			}
+			return server.HandleRequest(serverPort)
+		}
 		return server.HandleRequest(port)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(startCmd)
-	startCmd.Flags().StringVarP(&port, "port", "p", "8080", "The port of the server")
+	startCmd.Flags().StringVarP(&port, "port", "p", "", "The port of the server")
 }
