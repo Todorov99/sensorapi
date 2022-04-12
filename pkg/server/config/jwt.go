@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Todorov99/serverapi/pkg/entity"
-	"github.com/Todorov99/serverapi/pkg/vault"
+	"github.com/Todorov99/sensorapi/pkg/entity"
+	"github.com/Todorov99/sensorapi/pkg/vault"
 	"github.com/dgrijalva/jwt-go"
 )
 

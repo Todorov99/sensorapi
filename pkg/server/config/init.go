@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/Todorov99/serverapi/pkg/global"
+	"github.com/Todorov99/sensorapi/pkg/global"
 )
 
 var serverConfig *serverCfg

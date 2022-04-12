@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Todorov99/serverapi/pkg/entity"
+	"github.com/Todorov99/sensorapi/pkg/entity"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api/write"

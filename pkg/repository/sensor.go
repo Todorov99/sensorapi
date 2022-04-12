@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/Todorov99/serverapi/pkg/dto"
-	"github.com/Todorov99/serverapi/pkg/entity"
-	"github.com/Todorov99/serverapi/pkg/repository/query"
-	"github.com/Todorov99/serverapi/pkg/server/config"
+	"github.com/Todorov99/sensorapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/entity"
+	"github.com/Todorov99/sensorapi/pkg/repository/query"
+	"github.com/Todorov99/sensorapi/pkg/server/config"
 )
 
 type SensorRepository interface {
