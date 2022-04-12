@@ -82,7 +82,7 @@ func NewMeasurementService() MeasurementService {
 func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan bool, error) {
 	m.logger.Debug("Starting monitoring...")
 	done := make(chan bool)
-	startTime := time.Now().Format("2006-01-02-15:04:05")
+	startTime := time.Now().Format(global.TimeFormat)
 	reportFilename := "measurement_" + startTime + ".xlsx"
 
 	monState = monitorState{}
@@ -139,12 +139,12 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 
 				done <- true
 				monState.done = true
-				monState.finishedAt = time.Now().Format(time.RFC3339)
+				monState.finishedAt = time.Now().Format(global.TimeFormat)
 				return
 			case <-ctx.Done():
 				monState.monitorError = ctx.Err()
 				monState.done = true
-				monState.finishedAt = time.Now().Format(time.RFC3339)
+				monState.finishedAt = time.Now().Format(global.TimeFormat)
 				return
 			case <-t.C:
 				m.logger.Debug("Getting sensor measurements...")
@@ -152,7 +152,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 				if err != nil {
 					monState.monitorError = err
 					monState.done = true
-					monState.finishedAt = time.Now().Format(time.RFC3339)
+					monState.finishedAt = time.Now().Format(global.TimeFormat)
 					done <- true
 					return
 				}
@@ -164,7 +164,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 
 					monState.monitorError = merr
 					monState.done = true
-					monState.finishedAt = time.Now().Format(time.RFC3339)
+					monState.finishedAt = time.Now().Format(global.TimeFormat)
 					monState.criticalMeasurements = metric
 
 					critMetricReportFilename := "critical_metrics_from_" + startTime + ".xlsx"
@@ -316,7 +316,7 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 	for _, metr := range metrics {
 		if addToDb {
 			measurementEntity := entity.Measurement{
-				MeasuredAt: metr.MeasuredAt.Format(time.RFC3339),
+				MeasuredAt: metr.MeasuredAt,
 				Value:      metr.Value,
 				SensorID:   metr.SensorID,
 				DeviceID:   metr.DeviceID,
