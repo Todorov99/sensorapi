@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Todorov99/server/pkg/entity"
-	"github.com/Todorov99/server/pkg/global"
-	"github.com/Todorov99/server/pkg/repository/query"
-	"github.com/Todorov99/server/pkg/server/config"
+	"github.com/Todorov99/serverapi/pkg/entity"
+	"github.com/Todorov99/serverapi/pkg/global"
+	"github.com/Todorov99/serverapi/pkg/repository/query"
+	"github.com/Todorov99/serverapi/pkg/server/config"
 )
 
 type UserRepository interface {

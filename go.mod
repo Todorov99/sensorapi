@@ -1,4 +1,4 @@
-module github.com/Todorov99/server
+module github.com/Todorov99/serverapi
 
 go 1.17
 

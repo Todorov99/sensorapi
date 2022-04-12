@@ -10,8 +10,8 @@ import (
 	"os"
 
 	"github.com/Todorov99/sensorcli/pkg/logger"
-	"github.com/Todorov99/server/pkg/dto"
-	"github.com/Todorov99/server/pkg/server/config"
+	"github.com/Todorov99/serverapi/pkg/dto"
+	"github.com/Todorov99/serverapi/pkg/server/config"
 	"github.com/go-resty/resty/v2"
 )
 

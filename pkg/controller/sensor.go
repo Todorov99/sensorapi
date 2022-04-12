@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Todorov99/server/pkg/dto"
-	"github.com/Todorov99/server/pkg/service"
+	"github.com/Todorov99/serverapi/pkg/dto"
+	"github.com/Todorov99/serverapi/pkg/service"
 )
 
 var sensor = dto.Sensor{}
