@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Todorov99/sensorapi/pkg/entity"
+	"github.com/Todorov99/sensorapi/pkg/global"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api/write"
 )
 
 func createPoint(data entity.Measurement) (*write.Point, error) {
-	_, err := time.Parse(time.RFC3339, data.MeasuredAt)
+	measurementTime, err := time.Parse(time.RFC3339, data.MeasuredAt)
 	if err != nil {
 		return nil, err
 	}
@@ -28,8 +29,8 @@ func createPoint(data entity.Measurement) (*write.Point, error) {
 		"value": value,
 	}
 
-	point := influxdb2.NewPoint("sensor", tags, fields, time.Now())
-
+	fmt.Println(measurementTime)
+	point := influxdb2.NewPoint("sensor", tags, fields, measurementTime)
 	return point, nil
 }
 
@@ -67,7 +68,7 @@ func executeSelectQueryInflux(ctx context.Context, querry string, isType bool, i
 			measurement = append(measurement, queryResult.Record().ValueByKey("_value"))
 		} else {
 			measurement = append(measurement, entity.Measurement{
-				MeasuredAt: queryResult.Record().Time().String(),
+				MeasuredAt: queryResult.Record().Time().Format(global.TimeFormat),
 				Value:      strconv.FormatFloat(queryResult.Record().ValueByKey("_value").(float64), 'f', -1, 64),
 				SensorID:   queryResult.Record().ValueByKey("sensorID").(string),
 				DeviceID:   queryResult.Record().ValueByKey("deviceID").(string),

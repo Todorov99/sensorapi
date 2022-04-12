@@ -1,4 +1,4 @@
-# github.com/Todorov99/sensorcli v0.0.0-20220403122718-196145993b9c
+# github.com/Todorov99/sensorcli v0.0.0-20220412215640-74349e5b1bf1
 ## explicit; go 1.17
 github.com/Todorov99/sensorcli/cmd
 github.com/Todorov99/sensorcli/pkg/logger
@@ -145,28 +145,31 @@ github.com/tklauser/go-sysconf
 # github.com/tklauser/numcpus v0.4.0
 ## explicit; go 1.11
 github.com/tklauser/numcpus
-# github.com/xuri/efp v0.0.0-20220216053911-6d8731f62184
+# github.com/xuri/efp v0.0.0-20220407160117-ad0f7a785be8
 ## explicit; go 1.11
 github.com/xuri/efp
-# github.com/xuri/excelize/v2 v2.5.0
+# github.com/xuri/excelize/v2 v2.6.0
 ## explicit; go 1.15
 github.com/xuri/excelize/v2
+# github.com/xuri/nfp v0.0.0-20220409054826-5e722a1d9e22
+## explicit; go 1.15
+github.com/xuri/nfp
 # github.com/yusufpapurcu/wmi v1.2.2
 ## explicit; go 1.16
 github.com/yusufpapurcu/wmi
-# golang.org/x/crypto v0.0.0-20220331220935-ae2d96664a29
+# golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 ## explicit; go 1.17
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/md4
 golang.org/x/crypto/ripemd160
-# golang.org/x/net v0.0.0-20220403103023-749bd193bc2b
+# golang.org/x/net v0.0.0-20220412020605-290c469a71a5
 ## explicit; go 1.17
 golang.org/x/net/html
 golang.org/x/net/html/atom
 golang.org/x/net/html/charset
 golang.org/x/net/publicsuffix
-# golang.org/x/sys v0.0.0-20220403020550-483a9cbc67c0
+# golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix

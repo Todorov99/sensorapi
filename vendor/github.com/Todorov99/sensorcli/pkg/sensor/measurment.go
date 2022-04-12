@@ -8,16 +8,20 @@ import (
 	"github.com/Todorov99/sensorcli/pkg/util"
 )
 
+const (
+	TimeFormat = "2006-01-02-15:04:05"
+)
+
 // Measurment is struct type that holds inforamation about different sensor metrics
 type Measurment struct {
-	MeasuredAt time.Time `json:"measuredAt" yaml:"measuredAt"`
-	Value      string    `json:"value" yaml:"value"`
-	SensorID   string    `json:"sensorId" yaml:"sensorId"`
-	DeviceID   string    `json:"deviceId" yaml:"deviceId"`
+	MeasuredAt string `json:"measuredAt" yaml:"measuredAt"`
+	Value      string `json:"value" yaml:"value"`
+	SensorID   string `json:"sensorId" yaml:"sensorId"`
+	DeviceID   string `json:"deviceId" yaml:"deviceId"`
 }
 
 func newMeasurement(value string, sensorID int32, deviceID int32) Measurment {
-	return Measurment{time.Now(), value, strconv.FormatInt(int64(sensorID), 10), strconv.FormatInt(int64(deviceID), 10)}
+	return Measurment{time.Now().Format(TimeFormat), value, strconv.FormatInt(int64(sensorID), 10), strconv.FormatInt(int64(deviceID), 10)}
 }
 
 func newMeasurements(info interface{}) ([]Measurment, error) {
