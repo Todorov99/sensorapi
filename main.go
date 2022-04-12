@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/Todorov99/server/cmd"
+import "github.com/Todorov99/serverapi/cmd"
 
 func main() {
 	cmd.Execute()

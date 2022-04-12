@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/Todorov99/server/pkg/global"
+	"github.com/Todorov99/serverapi/pkg/global"
 	"github.com/mitchellh/mapstructure"
 )
 

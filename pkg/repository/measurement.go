@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Todorov99/server/pkg/entity"
-	"github.com/Todorov99/server/pkg/repository/query"
-	"github.com/Todorov99/server/pkg/server/config"
+	"github.com/Todorov99/serverapi/pkg/entity"
+	"github.com/Todorov99/serverapi/pkg/repository/query"
+	"github.com/Todorov99/serverapi/pkg/server/config"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
 
