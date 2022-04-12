@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Todorov99/serverapi/pkg/controller"
-	"github.com/Todorov99/serverapi/pkg/dto"
-	"github.com/Todorov99/serverapi/pkg/server/config"
+	"github.com/Todorov99/sensorapi/pkg/controller"
+	"github.com/Todorov99/sensorapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )

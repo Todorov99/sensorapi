@@ -1,4 +1,4 @@
-module github.com/Todorov99/serverapi
+module github.com/Todorov99/sensorapi
 
 go 1.17
 

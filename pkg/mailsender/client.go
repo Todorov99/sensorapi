@@ -9,9 +9,9 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/Todorov99/sensorapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/Todorov99/sensorcli/pkg/logger"
-	"github.com/Todorov99/serverapi/pkg/dto"
-	"github.com/Todorov99/serverapi/pkg/server/config"
 	"github.com/go-resty/resty/v2"
 )
 

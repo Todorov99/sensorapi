@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Todorov99/sensorapi/pkg/global"
 	"github.com/Todorov99/sensorcli/pkg/logger"
-	"github.com/Todorov99/serverapi/pkg/global"
 )
 
 var vaultLogger = logger.NewLogrus("config", os.Stdout)

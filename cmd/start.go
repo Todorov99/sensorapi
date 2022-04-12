@@ -19,8 +19,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Todorov99/serverapi/pkg/server"
-	_ "github.com/Todorov99/serverapi/pkg/server/config"
+	"github.com/Todorov99/sensorapi/pkg/server"
+	_ "github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/spf13/cobra"
 )
 

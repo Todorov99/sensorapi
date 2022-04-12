@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/Todorov99/serverapi/pkg/dto"
-	"github.com/Todorov99/serverapi/pkg/service"
+	"github.com/Todorov99/sensorapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/service"
 )
 
 type userController struct {

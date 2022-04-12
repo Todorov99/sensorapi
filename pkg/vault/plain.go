@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/Todorov99/serverapi/pkg/global"
+	"github.com/Todorov99/sensorapi/pkg/global"
 	"gopkg.in/yaml.v2"
 )
 

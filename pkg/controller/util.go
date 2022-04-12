@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Todorov99/serverapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/gorilla/mux"
 )
 

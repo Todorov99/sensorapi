@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/Todorov99/serverapi/pkg/vault"
+	"github.com/Todorov99/sensorapi/pkg/vault"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
 )
 

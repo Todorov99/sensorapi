@@ -15,7 +15,7 @@ limitations under the License.
 */
 package main
 
-import "github.com/Todorov99/serverapi/cmd"
+import "github.com/Todorov99/sensorapi/cmd"
 
 func main() {
 	cmd.Execute()

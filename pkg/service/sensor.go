@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Todorov99/serverapi/pkg/dto"
-	"github.com/Todorov99/serverapi/pkg/global"
-	"github.com/Todorov99/serverapi/pkg/repository"
+	"github.com/Todorov99/sensorapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/global"
+	"github.com/Todorov99/sensorapi/pkg/repository"
 	"github.com/mitchellh/mapstructure"
 )
 
