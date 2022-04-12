@@ -11,7 +11,7 @@ COPY --from=builder /sensorapi /sensorapi
 
 VOLUME "/var/lib/server"
 
-ENV PORT 8082
+ENV PORT 8081
 
 EXPOSE ${PORT}/tcp
 
