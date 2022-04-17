@@ -13,7 +13,8 @@ import (
 
 type DeviceRepository interface {
 	GetDeviceNameByID(ctx context.Context, id int) (string, error)
-	GetDeviceIDByName(ctx context.Context, deviceName string) (string, error)
+	GetDeviceIDByName(ctx context.Context, deviceName string) (int32, error)
+	AddDeviceSensors(ctx context.Context, deviceID, sensorID int32) error
 	IRepository
 }
 
@@ -23,7 +24,7 @@ type deviceRepository struct {
 
 func NewDeviceRepository() DeviceRepository {
 	return &deviceRepository{
-		config.GetDatabaseCfg().GetPostgreClient(),
+		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
 	}
 }
 
@@ -50,11 +51,31 @@ func (d *deviceRepository) GetAll(ctx context.Context) (interface{}, error) {
 }
 
 func (d *deviceRepository) Add(ctx context.Context, model interface{}) error {
-	repositoryLogger.Info("Adding device...")
+	repositoryLogger.Info("Adding device with all predifined sensors...")
 	device := model.(entity.Device)
-	return executeModifyingQuery(ctx, query.InsertDevice, d.postgreClient, device.Name, device.Description)
+	// err := executeSelectQuery(ctx, query.GetHighestDeviceID, d.postgreClient, &device.ID)
+	// if err != nil {
+	// 	return err
+	// }
+
+	err := executeModifyingQuery(ctx, query.InsertDevice, d.postgreClient, device.Name, device.Description)
+	if err != nil {
+		return err
+	}
+
+	// for _, s := range device.Sensors {
+	// 	err := executeModifyingQuery(ctx, query.InsertDeviceSensors, d.postgreClient, device.ID, s.ID)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	repositoryLogger.Info("Device sucessfully added")
+	return nil
 }
 
+func (d *deviceRepository) AddDeviceSensors(ctx context.Context, deviceID, sensorID int32) error {
+	return executeModifyingQuery(ctx, query.InsertDeviceSensors, d.postgreClient, deviceID, sensorID)
+}
 func (d *deviceRepository) Update(ctx context.Context, model interface{}) error {
 	device := model.(entity.Device)
 	return executeModifyingQuery(ctx, query.UpdateDevice, d.postgreClient, device.Name, device.Description, device.ID)
@@ -86,16 +107,16 @@ func (d *deviceRepository) Delete(ctx context.Context, id int) error {
 	return executeModifyingQuery(ctx, query.DeleteDevice, d.postgreClient, id)
 }
 
-func (d *deviceRepository) GetDeviceIDByName(ctx context.Context, deviceName string) (string, error) {
+func (d *deviceRepository) GetDeviceIDByName(ctx context.Context, deviceName string) (int32, error) {
 	repositoryLogger.Infof("Getting device ID by name: %q", deviceName)
-	id := ""
+	var id int32
 	err := executeSelectQuery(ctx, query.GetDeviceIDByName, d.postgreClient, &id, deviceName)
 	if err != nil {
-		return "", fmt.Errorf("failed getting device with name: %q: %w", deviceName, err)
+		return 0, fmt.Errorf("failed getting device with name: %q: %w", deviceName, err)
 	}
 
-	if id == "" {
-		return "", global.ErrorObjectNotFound
+	if id == 0 {
+		return 0, global.ErrorObjectNotFound
 	}
 
 	return id, nil

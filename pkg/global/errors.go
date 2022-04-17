@@ -5,6 +5,7 @@ import (
 )
 
 var (
-	ErrorObjectNotFound           = errors.New("object not found")
-	ErrorUserWithUsernameNotExist = errors.New("user does not exist")
+	ErrorObjectNotFound             = errors.New("object not found")
+	ErrorUserWithUsernameNotExist   = errors.New("user does not exist")
+	ErrorDeviceWithNameAlreadyExist = errors.New("device already exists")
 )

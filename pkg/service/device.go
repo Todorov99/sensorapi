@@ -18,12 +18,14 @@ import (
 type deviceService struct {
 	logger           *logrus.Entry
 	deviceRepository repository.DeviceRepository
+	sensorRepository repository.SensorRepository
 }
 
 func NewDeviceService() IService {
 	return &deviceService{
 		logger:           logger.NewLogrus("deviceService", os.Stdout),
 		deviceRepository: repository.NewDeviceRepository(),
+		sensorRepository: repository.NewSensorRepository(),
 	}
 }
 
@@ -68,16 +70,41 @@ func (d *deviceService) Add(ctx context.Context, model interface{}) error {
 		return err
 	}
 
-	checkForExistingDevice, err := d.deviceRepository.GetDeviceIDByName(ctx, device.Name)
+	err = d.ifDeviceExist(ctx, device.Name)
+	if errors.Is(err, global.ErrorDeviceWithNameAlreadyExist) {
+		return fmt.Errorf("device with name %s already exists", device.Name)
+	}
+
+	if err != nil && !errors.Is(err, global.ErrorDeviceWithNameAlreadyExist) {
+		return err
+	}
+
+	err = d.deviceRepository.Add(ctx, device)
 	if err != nil {
 		return err
 	}
 
-	if checkForExistingDevice != "" {
-		return fmt.Errorf("device with name: %q already exists", device.Name)
+	deviceID, err := d.deviceRepository.GetDeviceIDByName(ctx, device.Name)
+	if err != nil {
+		return err
 	}
 
-	return d.deviceRepository.Add(ctx, device)
+	device.ID = deviceID
+	sensors, err := d.sensorRepository.GetAll(ctx)
+	if err != nil {
+		return err
+	}
+
+	device.Sensors = sensors.([]entity.Sensor)
+
+	for _, sensor := range device.Sensors {
+		err := d.deviceRepository.AddDeviceSensors(ctx, device.ID, sensor.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (d *deviceService) Update(ctx context.Context, model interface{}) error {
@@ -108,7 +135,6 @@ func (d *deviceService) Delete(ctx context.Context, deviceID int) (interface{}, 
 		return nil, err
 	}
 
-	//TODO check whether the device has connected sensors
 	err = d.deviceRepository.Delete(ctx, deviceID)
 	if err != nil {
 		return nil, err
@@ -121,4 +147,17 @@ func (d *deviceService) Delete(ctx context.Context, deviceID int) (interface{}, 
 	}
 
 	return device, nil
+}
+
+func (d *deviceService) ifDeviceExist(ctx context.Context, deviceName string) error {
+	checkForExistingDevice, err := d.deviceRepository.GetDeviceIDByName(ctx, deviceName)
+	if err != nil && !errors.Is(err, global.ErrorObjectNotFound) {
+		return err
+	}
+
+	if checkForExistingDevice != 0 {
+		return global.ErrorDeviceWithNameAlreadyExist
+	}
+
+	return nil
 }
