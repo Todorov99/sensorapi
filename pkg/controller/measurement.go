@@ -3,7 +3,6 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
-	"mime"
 	"net/http"
 	"strconv"
 
@@ -190,9 +189,5 @@ func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Req
 func (m *measurementController) GetReportFile(w http.ResponseWriter, r *http.Request) {
 	keys := r.URL.Query()
 	filename := keys.Get("reportFilename")
-	cd := mime.FormatMediaType("attachment", map[string]string{"filename": filename})
-
-	w.Header().Add("Content-Disposition", cd)
-	w.Header().Add("Content-Type", "application/octet-stream")
-	http.ServeFile(w, r, filename)
+	serverFile(w, r, filename)
 }
