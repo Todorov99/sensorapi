@@ -66,10 +66,6 @@ func (m *measurementRepository) GetMeasurementsBetweenTimestampByDeviceIDBySenso
 }
 
 func (m *measurementRepository) Add(ctx context.Context, measurement entity.Measurement) error {
-	// _, err := time.Parse(time.RFC3339, measurement.MeasuredAt)
-	// if err != nil {
-	// 	return fmt.Errorf("invalid measurement timestamp: %w", err)
-	// }
 	rfc3339Timestamp, err := parseToRFC3339(measurement.MeasuredAt)
 	if err != nil {
 		return fmt.Errorf("invalid measurement timestamp: %w", err)
