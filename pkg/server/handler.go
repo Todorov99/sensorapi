@@ -26,6 +26,8 @@ func HandleRequest(port string) error {
 	routes.HandleFunc("/api/users/login", userController.Login).Methods("Get")
 	routes.HandleFunc("/api/users/register", userController.Register).Methods("POST")
 
+	routes.Handle("/api/device/generate/config/{id}", isAuthorized(deviceController.GenerateDeviceCfg)).Methods("GET")
+
 	routes.Handle("/api/device/{id}", isAuthorized(deviceController.GetByID)).Methods("GET")
 	routes.Handle("/api/devices/all", isAuthorized(deviceController.GetAll)).Methods("GET")
 	routes.Handle("/api/device/add", isAuthorized(deviceController.Post)).Methods("POST")

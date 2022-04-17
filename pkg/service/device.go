@@ -13,7 +13,13 @@ import (
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v2"
 )
+
+type DeviceService interface {
+	GenerateDeviceCfg(ctx context.Context, deviceID int) (string, error)
+	IService
+}
 
 type deviceService struct {
 	logger           *logrus.Entry
@@ -21,12 +27,49 @@ type deviceService struct {
 	sensorRepository repository.SensorRepository
 }
 
-func NewDeviceService() IService {
+func NewDeviceService() DeviceService {
 	return &deviceService{
 		logger:           logger.NewLogrus("deviceService", os.Stdout),
 		deviceRepository: repository.NewDeviceRepository(),
 		sensorRepository: repository.NewSensorRepository(),
 	}
+}
+
+func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID int) (string, error) {
+	d.logger.Debug("Generating device cfg...")
+	cfgFileName := "device_cfg.yaml"
+	dd, err := d.GetById(ctx, deviceID)
+	if err != nil {
+		return "", err
+	}
+
+	f, err := os.Create(cfgFileName)
+	if err != nil {
+		return "", err
+	}
+
+	defer func() {
+		f.Close()
+	}()
+
+	device := dto.Device{}
+	err = mapstructure.Decode(dd, &device)
+	if err != nil {
+		return "", err
+	}
+
+	deviceBytes, err := yaml.Marshal(device)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = f.Write(deviceBytes)
+	if err != nil {
+		return "", err
+	}
+
+	d.logger.Debug("Device cfg successfully generated")
+	return cfgFileName, nil
 }
 
 func (d *deviceService) GetAll(ctx context.Context) (interface{}, error) {

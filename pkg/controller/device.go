@@ -8,11 +8,16 @@ import (
 	"github.com/Todorov99/sensorapi/pkg/service"
 )
 
-type deviceController struct {
-	deviceService service.IService
+type DeviceContoller interface {
+	GenerateDeviceCfg(w http.ResponseWriter, r *http.Request)
+	IController
 }
 
-func NewDeviceController() IController {
+type deviceController struct {
+	deviceService service.DeviceService
+}
+
+func NewDeviceController() DeviceContoller {
 	return &deviceController{
 		deviceService: service.NewDeviceService(),
 	}
@@ -85,4 +90,19 @@ func (d *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
 
 	device, err := d.deviceService.Delete(r.Context(), deviceID)
 	response(w, "Device DELETE query execution.", err, device, http.StatusConflict)
+}
+
+func (d *deviceController) GenerateDeviceCfg(w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		r.Body.Close()
+	}()
+
+	deviceID := getIDFromPathVariable(r)
+	filename, err := d.deviceService.GenerateDeviceCfg(r.Context(), deviceID)
+	if err != nil {
+		response(w, "Failed generating device cfg", err, nil, http.StatusBadRequest)
+		return
+	}
+
+	serverFile(w, r, filename)
 }

@@ -3,6 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/http"
 	"strconv"
 
@@ -34,4 +35,12 @@ func getIDFromPathVariable(r *http.Request) int {
 		fmt.Println(err)
 	}
 	return id
+}
+
+func serverFile(w http.ResponseWriter, r *http.Request, filename string) {
+	cd := mime.FormatMediaType("attachment", map[string]string{"filename": filename})
+
+	w.Header().Add("Content-Disposition", cd)
+	w.Header().Add("Content-Type", "application/octet-stream")
+	http.ServeFile(w, r, filename)
 }

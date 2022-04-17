@@ -53,22 +53,12 @@ func (d *deviceRepository) GetAll(ctx context.Context) (interface{}, error) {
 func (d *deviceRepository) Add(ctx context.Context, model interface{}) error {
 	repositoryLogger.Info("Adding device with all predifined sensors...")
 	device := model.(entity.Device)
-	// err := executeSelectQuery(ctx, query.GetHighestDeviceID, d.postgreClient, &device.ID)
-	// if err != nil {
-	// 	return err
-	// }
 
 	err := executeModifyingQuery(ctx, query.InsertDevice, d.postgreClient, device.Name, device.Description)
 	if err != nil {
 		return err
 	}
 
-	// for _, s := range device.Sensors {
-	// 	err := executeModifyingQuery(ctx, query.InsertDeviceSensors, d.postgreClient, device.ID, s.ID)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
 	repositoryLogger.Info("Device sucessfully added")
 	return nil
 }
