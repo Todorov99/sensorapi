@@ -32,7 +32,7 @@ const (
 var monState monitorState
 
 type MeasurementService interface {
-	Monitor(ctx context.Context, cfg MonitorCfg) (<-chan bool, error)
+	Monitor(ctx context.Context, email string, monitorDto dto.MonitorDto) (<-chan bool, error)
 	GetMonitorStatus() dto.MonitorStatus
 	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
@@ -59,15 +59,15 @@ type monitorState struct {
 	criticalMeasurements  []sensor.Measurment
 }
 
-type MonitorCfg struct {
-	DeviceID           int
-	Duration           string
-	DeltaDuration      string
-	SnsorGroups        map[string]string
-	CriticalMetricsCfg dto.ValueCfg
-	GenerateReport     bool
-	SendReport         bool
-}
+// type MonitorCfg struct {
+// 	DeviceID           int
+// 	Duration           string
+// 	DeltaDuration      string
+// 	SnsorGroups        map[string]string
+// 	CriticalMetricsCfg dto.ValueCfg
+// 	GenerateReport     bool
+// 	SendReport         bool
+// }
 
 func NewMeasurementService() MeasurementService {
 	return &measurementService{
@@ -79,7 +79,7 @@ func NewMeasurementService() MeasurementService {
 	}
 }
 
-func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan bool, error) {
+func (m measurementService) Monitor(ctx context.Context, email string, monitorDto dto.MonitorDto) (<-chan bool, error) {
 	m.logger.Debug("Starting monitoring...")
 	done := make(chan bool)
 	startTime := time.Now().Format(global.TimeFormat)
@@ -89,24 +89,24 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 	monState.alreadyStartedProcess = true
 	monState.startTime = startTime
 
-	device, err := m.deviceRepository.GetByID(ctx, cfg.DeviceID)
+	device, err := m.deviceRepository.GetByID(ctx, monitorDto.DeviceID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
-			return nil, fmt.Errorf("device with ID: %d does not exist", cfg.DeviceID)
+			return nil, fmt.Errorf("device with ID: %d does not exist", monitorDto.DeviceID)
 		}
 		return nil, err
 	}
 
-	d, err := time.ParseDuration(cfg.Duration)
+	d, err := time.ParseDuration(monitorDto.Duration)
 	if err != nil {
 		return nil, err
 	}
 
 	monitorDuration := time.After(d)
-	cpu := sensorcmd.NewCpu(cfg.SnsorGroups)
+	cpu := sensorcmd.NewCpu(monitorDto.SensorGroups)
 
 	reportWriter := writer.New(reportFilename)
-	dDuration, err := time.ParseDuration(cfg.DeltaDuration)
+	dDuration, err := time.ParseDuration(monitorDto.DeltaDuration)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 	reportSender := dto.MailSenderDto{
 		Subject: "Measurement report",
 		To: []string{
-			"todor.mtodorov01@gmail.com",
+			email,
 		},
 	}
 
@@ -128,11 +128,11 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 		for {
 			select {
 			case <-monitorDuration:
-				if cfg.GenerateReport {
+				if monitorDto.GenerateReport {
 					monState.reportFile = reportFilename
 				}
 
-				if cfg.SendReport {
+				if monitorDto.SendReport {
 					reportSender.Body = "Your measurements finished successfully without any critical measurements"
 					m.mailsenderClt.SendWithAttachments(ctx, reportSender, []string{reportFilename})
 				}
@@ -157,7 +157,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 					return
 				}
 
-				metric, err := m.scanMetrics(ctx, measurements, cfg.CriticalMetricsCfg, true)
+				metric, err := m.scanMetrics(ctx, measurements, monitorDto.MetricValueCfg, true)
 				if err != nil {
 					var merr error
 					merr = multierror.Append(merr, err)
@@ -183,7 +183,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 						critMetricReportFilename,
 					}
 
-					if cfg.GenerateReport {
+					if monitorDto.GenerateReport {
 						if _, err := os.Stat(reportFilename); err == nil {
 							reportAttachments = append(reportAttachments, reportFilename)
 						}
@@ -200,7 +200,7 @@ func (m measurementService) Monitor(ctx context.Context, cfg MonitorCfg) (<-chan
 					return
 				}
 
-				if cfg.GenerateReport {
+				if monitorDto.GenerateReport {
 					go func() {
 						err := reportWriter.WritoToXslx(measurements)
 						if err != nil {
