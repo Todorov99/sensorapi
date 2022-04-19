@@ -1,7 +1,10 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Todorov99/sensorapi/pkg/entity"
@@ -112,4 +115,67 @@ func (j *jwtCfg) RenewSigningKey(signKeySecret vault.Secret) error {
 
 	configLogger.Debug("JWT signing key successfully updated")
 	return nil
+}
+
+// HTTPError represents a HTTP response error
+type HTTPError struct {
+	err        error
+	statusCode int
+}
+
+func (h HTTPError) Error() error {
+	return h.err
+}
+
+func (h HTTPError) StatusCode() int {
+	return h.statusCode
+}
+
+// ParseToken parses the token provided in the request header
+func ParseToken(w http.ResponseWriter, r *http.Request) (*jwt.Token, HTTPError) {
+	bareerToken := r.Header.Get("Authorization")
+	if bareerToken == "" {
+		return nil, HTTPError{
+			err:        fmt.Errorf("no Authorization toke provided"),
+			statusCode: http.StatusForbidden,
+		}
+	}
+
+	t := strings.Split(bareerToken, " ")[1]
+
+	token, err := jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+
+		jwtCfg := GetJWTCfg()
+		tokenClaims := token.Claims.(jwt.MapClaims)
+		if !tokenClaims.VerifyAudience(jwtCfg.GetJWTAudience(), false) {
+			return nil, errors.New("invalid aud of the JWT")
+		}
+
+		if !tokenClaims.VerifyIssuer(jwtCfg.GetJWTIssuer(), false) {
+			return nil, errors.New("invalid iss of the JWT")
+		}
+
+		return jwtCfg.GetJWTSigningKey(), nil
+	})
+
+	if err != nil {
+		return nil, HTTPError{
+			err:        err,
+			statusCode: http.StatusForbidden,
+		}
+	}
+
+	return token, HTTPError{
+		err:        nil,
+		statusCode: http.StatusOK,
+	}
+}
+
+func GetJWTEmailClaim(token *jwt.Token) string {
+	tokenClaims := token.Claims.(jwt.MapClaims)
+	emailClaim := tokenClaims["email"].(string)
+	return emailClaim
 }

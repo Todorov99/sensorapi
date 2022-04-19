@@ -2,15 +2,12 @@ package server
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/Todorov99/sensorapi/pkg/controller"
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
 
@@ -54,46 +51,16 @@ func HandleRequest(port string) error {
 
 func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		bareerToken := r.Header.Get("Authorization")
-		if bareerToken == "" {
+		token, httpErr := config.ParseToken(w, r)
+		if httpErr.Error() != nil {
 			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusForbidden)
+			w.WriteHeader(httpErr.StatusCode())
 			responseError := dto.ResponseError{
-				ErrMessage: "No Authorization toke provided",
+				ErrMessage: httpErr.Error().Error(),
 			}
 			json.NewEncoder(w).Encode(responseError)
 			return
 		}
-
-		t := strings.Split(bareerToken, " ")[1]
-
-		token, err := jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, errors.New("invalid signing method")
-			}
-
-			jwtCfg := config.GetJWTCfg()
-			tokenClaims := token.Claims.(jwt.MapClaims)
-			if !tokenClaims.VerifyAudience(jwtCfg.GetJWTAudience(), false) {
-				return nil, errors.New("invalid aud of the JWT")
-			}
-
-			if !tokenClaims.VerifyIssuer(jwtCfg.GetJWTIssuer(), false) {
-				return nil, errors.New("invalid iss of the JWT")
-			}
-
-			return jwtCfg.GetJWTSigningKey(), nil
-		})
-
-		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusForbidden)
-			responseError := dto.ResponseError{
-				ErrMessage: err.Error(),
-			}
-			json.NewEncoder(w).Encode(responseError)
-		}
-
 		if token.Valid {
 			endpoint(w, r)
 		}

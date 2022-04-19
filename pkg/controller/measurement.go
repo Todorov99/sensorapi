@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/Todorov99/sensorapi/pkg/dto"
-	"github.com/Todorov99/sensorapi/pkg/global"
+	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/Todorov99/sensorapi/pkg/service"
 )
 
@@ -120,50 +119,17 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	keys := r.URL.Query()
+	token, _ := config.ParseToken(w, r)
+	userEmail := config.GetJWTEmailClaim(token)
 
-	valueCfg := dto.ValueCfg{}
-	decodeErr := json.NewDecoder(r.Body).Decode(&valueCfg)
+	monitorDto := dto.MonitorDto{}
+	decodeErr := json.NewDecoder(r.Body).Decode(&monitorDto)
 	if decodeErr != nil {
 		controllerLogger.Error(decodeErr)
 		return
 	}
 
-	sensorGroupsWithSysFiles := map[string]string{
-		global.CpuTempGroup:  keys.Get("tempSysFile"),
-		global.CpuUsageGroup: "",
-		global.MemoryGroup:   "",
-	}
-
-	deviceID, err := strconv.Atoi(keys.Get("deviceID"))
-	if err != nil {
-		response(w, "Invalid device ID", fmt.Errorf("invalid deviceID"), nil, http.StatusBadRequest)
-		return
-	}
-
-	generateReport, err := strconv.ParseBool(keys.Get("generateReport"))
-	if err != nil {
-		response(w, "Invalid boolean", err, nil, http.StatusBadRequest)
-		return
-	}
-
-	sendReport, err := strconv.ParseBool(keys.Get("sendReport"))
-	if err != nil {
-		response(w, "Invalid boolean", err, nil, http.StatusBadRequest)
-		return
-	}
-
-	monCfg := service.MonitorCfg{
-		DeviceID:           deviceID,
-		Duration:           keys.Get("duration"),
-		DeltaDuration:      keys.Get("deltaDuration"),
-		SnsorGroups:        sensorGroupsWithSysFiles,
-		CriticalMetricsCfg: valueCfg,
-		GenerateReport:     generateReport,
-		SendReport:         sendReport,
-	}
-
-	done, err := m.measurementService.Monitor(r.Context(), monCfg)
+	done, err := m.measurementService.Monitor(r.Context(), userEmail, monitorDto)
 	if err != nil {
 		response(w, "Starting the monitoring process failed", err, nil, http.StatusBadRequest)
 		return
