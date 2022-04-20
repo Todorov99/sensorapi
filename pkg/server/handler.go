@@ -43,7 +43,7 @@ func HandleRequest(port string) error {
 	routes.Handle("/api/measurement/collect", isAuthorized(measurementController.Monitor)).Methods("POST")
 	routes.Handle("/api/measurement/average", isAuthorized(measurementController.GetSensorAverageValue)).Methods("GET")
 	routes.Handle("/api/measurement/correlation", isAuthorized(measurementController.GetSensorsCorrelationCoefficient)).Methods("GET")
-	routes.Handle("/api/measurement/monitor/status", isAuthorized(measurementController.MonitorStatus)).Methods("GET")
+	routes.Handle("/api/measurement/monitor/status/{id}", isAuthorized(measurementController.MonitorStatus)).Methods("GET")
 	routes.Handle("/api/measurement/monitor/report", isAuthorized(measurementController.GetReportFile)).Methods("GET")
 
 	return http.ListenAndServe(fmt.Sprintf(":%s", port), routes)

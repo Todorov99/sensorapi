@@ -114,20 +114,20 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		r.Body.Close()
 	}()
 
-	if m.measurementService.GetMonitorStatus().Status == service.StateInProgress {
-		response(w, "There is running measurement", fmt.Errorf("running process"), nil, http.StatusBadRequest)
-		return
-	}
-
-	token, _ := config.ParseToken(w, r)
-	userEmail := config.GetJWTEmailClaim(token)
-
 	monitorDto := dto.MonitorDto{}
 	decodeErr := json.NewDecoder(r.Body).Decode(&monitorDto)
 	if decodeErr != nil {
 		controllerLogger.Error(decodeErr)
 		return
 	}
+
+	if m.measurementService.GetMonitorStatus(monitorDto.DeviceID).Status == service.StateInProgress {
+		response(w, "There is running measurement", fmt.Errorf("running process"), nil, http.StatusBadRequest)
+		return
+	}
+
+	token, _ := config.ParseToken(w, r)
+	userEmail := config.GetJWTEmailClaim(token)
 
 	done, err := m.measurementService.Monitor(r.Context(), userEmail, monitorDto)
 	if err != nil {
@@ -148,7 +148,8 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 }
 
 func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Request) {
-	monitorStatus := m.measurementService.GetMonitorStatus()
+	deviceID := getIDFromPathVariable(r)
+	monitorStatus := m.measurementService.GetMonitorStatus(deviceID)
 	response(w, "Getting monitor status...", nil, monitorStatus, http.StatusAccepted)
 }
 

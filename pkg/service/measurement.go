@@ -29,11 +29,9 @@ const (
 	StateError      = "Error"
 )
 
-var monState monitorState
-
 type MeasurementService interface {
 	Monitor(ctx context.Context, email string, monitorDto dto.MonitorDto) (<-chan bool, error)
-	GetMonitorStatus() dto.MonitorStatus
+	GetMonitorStatus(deviceID int) dto.MonitorStatus
 	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
 	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
 	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
@@ -46,28 +44,18 @@ type measurementService struct {
 	deviceRepository      repository.DeviceRepository
 	sensorRepository      repository.SensorRepository
 	mailsenderClt         *mailsender.Client
+	monitorProcesses      map[int]*monitorState
 }
 
 type monitorState struct {
-	startTime             string
-	finishedAt            string
-	done                  bool
-	alreadyStartedProcess bool
-	monitorError          error
-	reportFile            string
-	measurements          []sensor.Measurment
-	criticalMeasurements  []sensor.Measurment
+	startTime            string
+	finishedAt           string
+	done                 bool
+	monitorError         error
+	reportFile           string
+	measurements         []sensor.Measurment
+	criticalMeasurements []sensor.Measurment
 }
-
-// type MonitorCfg struct {
-// 	DeviceID           int
-// 	Duration           string
-// 	DeltaDuration      string
-// 	SnsorGroups        map[string]string
-// 	CriticalMetricsCfg dto.ValueCfg
-// 	GenerateReport     bool
-// 	SendReport         bool
-// }
 
 func NewMeasurementService() MeasurementService {
 	return &measurementService{
@@ -76,18 +64,13 @@ func NewMeasurementService() MeasurementService {
 		sensorRepository:      repository.NewSensorRepository(),
 		deviceRepository:      repository.NewDeviceRepository(),
 		mailsenderClt:         mailsender.New(),
+		monitorProcesses:      make(map[int]*monitorState),
 	}
 }
 
 func (m measurementService) Monitor(ctx context.Context, email string, monitorDto dto.MonitorDto) (<-chan bool, error) {
 	m.logger.Debug("Starting monitoring...")
 	done := make(chan bool)
-	startTime := time.Now().Format(global.TimeFormat)
-	reportFilename := "measurement_" + startTime + ".xlsx"
-
-	monState = monitorState{}
-	monState.alreadyStartedProcess = true
-	monState.startTime = startTime
 
 	device, err := m.deviceRepository.GetByID(ctx, monitorDto.DeviceID)
 	if err != nil {
@@ -102,14 +85,18 @@ func (m measurementService) Monitor(ctx context.Context, email string, monitorDt
 		return nil, err
 	}
 
-	monitorDuration := time.After(d)
-	cpu := sensorcmd.NewCpu(monitorDto.SensorGroups)
-
-	reportWriter := writer.New(reportFilename)
 	dDuration, err := time.ParseDuration(monitorDto.DeltaDuration)
 	if err != nil {
 		return nil, err
 	}
+
+	monitorDuration := time.After(d)
+	cpu := sensorcmd.NewCpu(monitorDto.SensorGroups)
+
+	startTime := time.Now().Format(global.TimeFormat)
+	reportFilename := "measurement_" + startTime + ".xlsx"
+
+	reportWriter := writer.New(reportFilename)
 
 	t := time.NewTicker(dDuration)
 
@@ -121,6 +108,11 @@ func (m measurementService) Monitor(ctx context.Context, email string, monitorDt
 	}
 
 	go func() {
+		monState := &monitorState{}
+		monState.startTime = startTime
+
+		m.monitorProcesses[monitorDto.DeviceID] = monState
+
 		defer func() {
 			close(done)
 		}()
@@ -221,8 +213,10 @@ func (m measurementService) Monitor(ctx context.Context, email string, monitorDt
 	return done, nil
 }
 
-func (m measurementService) GetMonitorStatus() dto.MonitorStatus {
-	if !monState.alreadyStartedProcess {
+func (m measurementService) GetMonitorStatus(deviceID int) dto.MonitorStatus {
+	monState := m.monitorProcesses[deviceID]
+
+	if monState == nil {
 		return dto.MonitorStatus{
 			Status: "Monitor process haven't been started yet",
 		}
