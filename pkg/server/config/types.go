@@ -1,11 +1,16 @@
 package config
 
 type ApplicationProperties struct {
-	InfluxProps   InfluxProperties     `yaml:"influxdb,omitempty"`
-	PostgreProps  PostgreProperties    `yaml:"postgresdb,omitempty"`
-	Authorization Authorization        `yaml:"authorization,omitempty"`
-	MailSender    MailSenderProperties `yaml:"mailsender,omitempty"`
-	VaultType     string               `yaml:"vaultType,omitempty"`
+	Services       Services       `yaml:"services,omitempty"`
+	Authentication Authentication `yaml:"authentication,omitempty"`
+	VaultType      string         `yaml:"vaultType,omitempty"`
+	User           User           `yaml:"user,omitempty"`
+}
+
+type Services struct {
+	InfluxProps  InfluxProperties     `yaml:"influxdb,omitempty"`
+	PostgreProps PostgreProperties    `yaml:"postgresdb,omitempty"`
+	MailSender   MailSenderProperties `yaml:"mailsender,omitempty"`
 }
 
 type PostgreProperties struct {
@@ -30,13 +35,20 @@ type MailSenderProperties struct {
 	Port        string `yaml:"port,omitempty"`
 }
 
-type Authorization struct {
-	JWT JWTAuthorization `yaml:"JWT,omitempty"`
+type Authentication struct {
+	JWT JWTAuth `yaml:"JWT,omitempty"`
 }
 
-type JWTAuthorization struct {
+type JWTAuth struct {
 	JWTAudienceSecret string `yaml:"jwtAudienceSecret,omitempty"`
 	JWTIssuerSecret   string `yaml:"jwtIssuerSecret,omitempty"`
 	JWTSigningKey     string `yaml:"jwtSigningKey,omitempty"`
 	ExpirationTime    string `yaml:"expirationTime,omitempty"`
+}
+
+type User struct {
+	UserSecret string `yaml:"userSecret"`
+	FirstName  string `yaml:"firstname"`
+	LastName   string `yaml:"lastname"`
+	Email      string `yaml:"email"`
 }

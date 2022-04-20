@@ -5,17 +5,51 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/entity"
 	"github.com/Todorov99/sensorapi/pkg/global"
 	"github.com/Todorov99/sensorapi/pkg/repository"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
+	"github.com/Todorov99/sensorapi/pkg/vault"
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func init() {
+	userService := NewUserService()
+	userCfg := config.GetUserCfg()
+
+	vault, err := vault.New(config.GetVault())
+	if err != nil {
+		panic(err)
+	}
+
+	userSecret, err := vault.Get(userCfg.UserSecret)
+	if err != nil {
+		panic(err)
+	}
+
+	err = userService.Register(context.Background(), dto.Register{
+		UserName:  userSecret.Name,
+		Password:  userSecret.Value,
+		FirstName: userCfg.FirstName,
+		LastName:  userCfg.LastName,
+		Email:     userCfg.Email,
+	})
+
+	if err != nil && strings.Contains(err.Error(), "already exists") {
+		fmt.Println("Skipping user creation")
+		return
+	}
+
+	if err != nil {
+		panic(err)
+	}
+}
 
 type UserService interface {
 	Register(ctx context.Context, registerDto dto.Register) error

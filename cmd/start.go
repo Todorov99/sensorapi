@@ -21,6 +21,7 @@ import (
 
 	"github.com/Todorov99/sensorapi/pkg/server"
 	_ "github.com/Todorov99/sensorapi/pkg/server/config"
+	_ "github.com/Todorov99/sensorapi/pkg/service"
 	"github.com/spf13/cobra"
 )
 

@@ -13,3 +13,6 @@
 - id: signingKey
   name: JWTSigningKey
   value: ttodorovSecretSignJWTKey
+- id: userSecret
+  name: ttodorov
+  value: "Abcd123!@"
