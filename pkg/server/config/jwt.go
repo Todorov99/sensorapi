@@ -62,7 +62,9 @@ func (j *jwtCfg) GenerateJWT(userEntity entity.User) (string, error) {
 		return "", err
 	}
 
+	claims["id"] = userEntity.ID
 	claims["email"] = userEntity.Email
+	claims["username"] = userEntity.UserName
 	claims["name"] = userEntity.FirstName
 	// Aud: the services from which the token could be used
 	claims["aud"] = audSecret.Value
@@ -178,4 +180,16 @@ func GetJWTEmailClaim(token *jwt.Token) string {
 	tokenClaims := token.Claims.(jwt.MapClaims)
 	emailClaim := tokenClaims["email"].(string)
 	return emailClaim
+}
+
+func GetJWTUsernameClaim(token *jwt.Token) string {
+	tokenClaims := token.Claims.(jwt.MapClaims)
+	usernameClaim := tokenClaims["username"].(string)
+	return usernameClaim
+}
+
+func GetJWTUserIDClaim(token *jwt.Token) int {
+	tokenClaims := token.Claims.(jwt.MapClaims)
+	userIDClaim := tokenClaims["id"].(float64)
+	return int(userIDClaim)
 }

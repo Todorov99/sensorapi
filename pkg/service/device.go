@@ -17,14 +17,19 @@ import (
 )
 
 type DeviceService interface {
-	GenerateDeviceCfg(ctx context.Context, deviceID int) (string, error)
-	IService
+	GetAll(ctx context.Context, userID int) (interface{}, error)
+	GetById(ctx context.Context, ID, userID int) (interface{}, error)
+	Add(ctx context.Context, model interface{}, userID int) error
+	Update(ctx context.Context, model interface{}, userID int) error
+	Delete(ctx context.Context, deviceID, userID int) (interface{}, error)
+	GenerateDeviceCfg(ctx context.Context, deviceID, userID int) (string, error)
 }
 
 type deviceService struct {
 	logger           *logrus.Entry
 	deviceRepository repository.DeviceRepository
 	sensorRepository repository.SensorRepository
+	userRepository   repository.UserRepository
 }
 
 func NewDeviceService() DeviceService {
@@ -32,13 +37,14 @@ func NewDeviceService() DeviceService {
 		logger:           logger.NewLogrus("deviceService", os.Stdout),
 		deviceRepository: repository.NewDeviceRepository(),
 		sensorRepository: repository.NewSensorRepository(),
+		userRepository:   repository.NewUserRepository(),
 	}
 }
 
-func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID int) (string, error) {
+func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID int) (string, error) {
 	d.logger.Debug("Generating device cfg...")
 	cfgFileName := "device_cfg.yaml"
-	dd, err := d.GetById(ctx, deviceID)
+	dd, err := d.GetById(ctx, deviceID, userID)
 	if err != nil {
 		return "", err
 	}
@@ -72,9 +78,10 @@ func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID int) (st
 	return cfgFileName, nil
 }
 
-func (d *deviceService) GetAll(ctx context.Context) (interface{}, error) {
+func (d *deviceService) GetAll(ctx context.Context, userID int) (interface{}, error) {
 	d.logger.Debug("Getting all devices")
-	devices, err := d.deviceRepository.GetAll(ctx)
+
+	devices, err := d.deviceRepository.GetAll(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -88,8 +95,8 @@ func (d *deviceService) GetAll(ctx context.Context) (interface{}, error) {
 	return allDevices, nil
 }
 
-func (d *deviceService) GetById(ctx context.Context, deviceID int) (interface{}, error) {
-	entityDevice, err := d.deviceRepository.GetByID(ctx, deviceID)
+func (d *deviceService) GetById(ctx context.Context, deviceID, userID int) (interface{}, error) {
+	entityDevice, err := d.deviceRepository.GetByID(ctx, deviceID, userID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
 			return nil, fmt.Errorf("device with ID: %d does not exist", deviceID)
@@ -106,7 +113,7 @@ func (d *deviceService) GetById(ctx context.Context, deviceID int) (interface{},
 	return device, nil
 }
 
-func (d *deviceService) Add(ctx context.Context, model interface{}) error {
+func (d *deviceService) Add(ctx context.Context, model interface{}, userID int) error {
 	device := entity.Device{}
 	err := mapstructure.Decode(model, &device)
 	if err != nil {
@@ -122,7 +129,7 @@ func (d *deviceService) Add(ctx context.Context, model interface{}) error {
 		return err
 	}
 
-	err = d.deviceRepository.Add(ctx, device)
+	err = d.deviceRepository.Add(ctx, device, userID)
 	if err != nil {
 		return err
 	}
@@ -133,6 +140,7 @@ func (d *deviceService) Add(ctx context.Context, model interface{}) error {
 	}
 
 	device.ID = deviceID
+
 	sensors, err := d.sensorRepository.GetAll(ctx)
 	if err != nil {
 		return err
@@ -150,7 +158,7 @@ func (d *deviceService) Add(ctx context.Context, model interface{}) error {
 	return nil
 }
 
-func (d *deviceService) Update(ctx context.Context, model interface{}) error {
+func (d *deviceService) Update(ctx context.Context, model interface{}, userID int) error {
 	device := entity.Device{}
 	err := mapstructure.Decode(model, &device)
 	if err != nil {
@@ -158,7 +166,7 @@ func (d *deviceService) Update(ctx context.Context, model interface{}) error {
 	}
 	d.logger.Debugf("Updating device with ID: %d", device.ID)
 
-	_, err = d.deviceRepository.GetByID(ctx, int(device.ID))
+	_, err = d.deviceRepository.GetByID(ctx, int(device.ID), userID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
 			return fmt.Errorf("device with id: %d does not exist", device.ID)
@@ -166,11 +174,11 @@ func (d *deviceService) Update(ctx context.Context, model interface{}) error {
 		return err
 	}
 
-	return d.deviceRepository.Update(ctx, device)
+	return d.deviceRepository.Update(ctx, device, userID)
 }
 
-func (d *deviceService) Delete(ctx context.Context, deviceID int) (interface{}, error) {
-	deviceForDelete, err := d.deviceRepository.GetByID(ctx, deviceID)
+func (d *deviceService) Delete(ctx context.Context, deviceID, userID int) (interface{}, error) {
+	deviceForDelete, err := d.deviceRepository.GetByID(ctx, deviceID, userID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
 			return nil, fmt.Errorf("device with id: %d does not exist", deviceID)
@@ -178,7 +186,7 @@ func (d *deviceService) Delete(ctx context.Context, deviceID int) (interface{}, 
 		return nil, err
 	}
 
-	err = d.deviceRepository.Delete(ctx, deviceID)
+	err = d.deviceRepository.Delete(ctx, deviceID, userID)
 	if err != nil {
 		return nil, err
 	}

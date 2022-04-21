@@ -30,10 +30,10 @@ const (
 )
 
 type MeasurementService interface {
-	Monitor(ctx context.Context, email string, monitorDto dto.MonitorDto) (<-chan bool, error)
+	Monitor(ctx context.Context, email string, userID int, monitorDto dto.MonitorDto) (<-chan bool, error)
 	GetMonitorStatus(deviceID int) dto.MonitorStatus
-	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1 string, deviceID2 string, sensorID1 string, sensorID2 string, startTime string, endTime string) (float64, error)
-	GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error)
+	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error)
+	GetAverageValueOfMeasurements(ctx context.Context, deviceID, sensorID, startTime, endTime string) (string, error)
 	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
 	AddMeasurements(ctx context.Context, measurement dto.Measurement) error
 }
@@ -43,6 +43,7 @@ type measurementService struct {
 	measurementRepository repository.MeasurementRepository
 	deviceRepository      repository.DeviceRepository
 	sensorRepository      repository.SensorRepository
+	userRepository        repository.UserRepository
 	mailsenderClt         *mailsender.Client
 	monitorProcesses      map[int]*monitorState
 }
@@ -63,16 +64,17 @@ func NewMeasurementService() MeasurementService {
 		measurementRepository: repository.NewMeasurementRepository(),
 		sensorRepository:      repository.NewSensorRepository(),
 		deviceRepository:      repository.NewDeviceRepository(),
+		userRepository:        repository.NewUserRepository(),
 		mailsenderClt:         mailsender.New(),
 		monitorProcesses:      make(map[int]*monitorState),
 	}
 }
 
-func (m measurementService) Monitor(ctx context.Context, email string, monitorDto dto.MonitorDto) (<-chan bool, error) {
+func (m measurementService) Monitor(ctx context.Context, email string, userID int, monitorDto dto.MonitorDto) (<-chan bool, error) {
 	m.logger.Debug("Starting monitoring...")
 	done := make(chan bool)
 
-	device, err := m.deviceRepository.GetByID(ctx, monitorDto.DeviceID)
+	device, err := m.deviceRepository.GetByID(ctx, monitorDto.DeviceID, userID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
 			return nil, fmt.Errorf("device with ID: %d does not exist", monitorDto.DeviceID)
@@ -251,7 +253,7 @@ func (m measurementService) GetMonitorStatus(deviceID int) dto.MonitorStatus {
 	}
 }
 
-func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime string, endTime string) (string, error) {
+func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime, endTime string) (string, error) {
 	err := m.ifDeviceAndSensorExists(ctx, deviceID, sensorID)
 	if err != nil {
 		return "", err
@@ -451,7 +453,7 @@ func (m *measurementService) ifDeviceAndSensorExists(ctx context.Context, device
 		return err
 	}
 
-	_, err = m.sensorRepository.GetByID(context.Background(), sID)
+	_, err = m.sensorRepository.GetByID(ctx, sID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
 			return fmt.Errorf("sensor with id: %d does not exist", sID)

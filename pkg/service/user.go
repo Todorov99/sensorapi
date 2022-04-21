@@ -49,11 +49,17 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	err = userService.AddDevice(context.Background(), 1)
+	if err != nil {
+		panic(err)
+	}
 }
 
 type UserService interface {
 	Register(ctx context.Context, registerDto dto.Register) error
 	Login(ctx context.Context, loginDto dto.Login) (string, error)
+	AddDevice(ctx context.Context, userID int) error
 }
 
 type userService struct {
@@ -109,6 +115,10 @@ func (u *userService) Login(ctx context.Context, loginDto dto.Login) (string, er
 	}
 
 	return token, nil
+}
+
+func (d *userService) AddDevice(ctx context.Context, userID int) error {
+	return d.userRepository.AddUserDvice(ctx, userID)
 }
 
 func getHash(pwd []byte) (string, error) {

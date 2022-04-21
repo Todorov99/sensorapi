@@ -4,35 +4,44 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/Todorov99/sensorapi/pkg/entity"
 	"github.com/Todorov99/sensorapi/pkg/global"
 	"github.com/Todorov99/sensorapi/pkg/repository/query"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
+	"github.com/Todorov99/sensorcli/pkg/logger"
+	"github.com/sirupsen/logrus"
 )
 
 type DeviceRepository interface {
 	GetDeviceNameByID(ctx context.Context, id int) (string, error)
 	GetDeviceIDByName(ctx context.Context, deviceName string) (int32, error)
 	AddDeviceSensors(ctx context.Context, deviceID, sensorID int32) error
-	IRepository
+	GetAll(ctx context.Context, userID int) (interface{}, error)
+	GetByID(ctx context.Context, id, userID int) (interface{}, error)
+	Add(ctx context.Context, entity interface{}, userID int) error
+	Update(ctx context.Context, entity interface{}, userID int) error
+	Delete(ctx context.Context, id, userID int) error
 }
 
 type deviceRepository struct {
+	logger        *logrus.Entry
 	postgreClient *sql.DB
 }
 
 func NewDeviceRepository() DeviceRepository {
 	return &deviceRepository{
+		logger:        logger.NewLogrus("deviceRepository", os.Stdout),
 		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
 	}
 }
 
-func (d *deviceRepository) GetAll(ctx context.Context) (interface{}, error) {
-	repositoryLogger.Debug("Getting all devicess...")
+func (d *deviceRepository) GetAll(ctx context.Context, userID int) (interface{}, error) {
+	d.logger.Debug("Getting all devicess...")
 	devices := []*entity.Device{}
 
-	err := executeSelectQuery(ctx, query.GetAllDevices, d.postgreClient, &devices)
+	err := executeSelectQuery(ctx, query.GetAllDevices, d.postgreClient, &devices, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -46,36 +55,37 @@ func (d *deviceRepository) GetAll(ctx context.Context) (interface{}, error) {
 
 		device.Sensors = append(device.Sensors, sensors...)
 	}
-	repositoryLogger.Debug("Devices successfully retrieved")
+	d.logger.Debug("Devices successfully retrieved")
 	return devices, nil
 }
 
-func (d *deviceRepository) Add(ctx context.Context, model interface{}) error {
-	repositoryLogger.Info("Adding device with all predifined sensors...")
+func (d *deviceRepository) Add(ctx context.Context, model interface{}, userID int) error {
+	d.logger.Info("Adding device with all predifined sensors...")
 	device := model.(entity.Device)
 
-	err := executeModifyingQuery(ctx, query.InsertDevice, d.postgreClient, device.Name, device.Description)
+	err := executeModifyingQuery(ctx, query.InsertDevice, d.postgreClient, device.Name, device.Description, userID)
 	if err != nil {
 		return err
 	}
 
-	repositoryLogger.Info("Device sucessfully added")
+	d.logger.Info("Device sucessfully added")
 	return nil
 }
 
 func (d *deviceRepository) AddDeviceSensors(ctx context.Context, deviceID, sensorID int32) error {
 	return executeModifyingQuery(ctx, query.InsertDeviceSensors, d.postgreClient, deviceID, sensorID)
 }
-func (d *deviceRepository) Update(ctx context.Context, model interface{}) error {
+
+func (d *deviceRepository) Update(ctx context.Context, model interface{}, userID int) error {
 	device := model.(entity.Device)
-	return executeModifyingQuery(ctx, query.UpdateDevice, d.postgreClient, device.Name, device.Description, device.ID)
+	return executeModifyingQuery(ctx, query.UpdateDevice, d.postgreClient, device.Name, device.Description, device.ID, userID)
 }
 
-func (d *deviceRepository) GetByID(ctx context.Context, id int) (interface{}, error) {
-	repositoryLogger.Debugf("Getting device by ID: %d", id)
+func (d *deviceRepository) GetByID(ctx context.Context, id, userID int) (interface{}, error) {
+	d.logger.Debugf("Getting device by ID: %d", id)
 	device := &entity.Device{}
 
-	err := executeSelectQuery(ctx, query.GetDeviceByID, d.postgreClient, device, id)
+	err := executeSelectQuery(ctx, query.GetDeviceByID, d.postgreClient, device, id, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -87,18 +97,18 @@ func (d *deviceRepository) GetByID(ctx context.Context, id int) (interface{}, er
 	}
 
 	device.Sensors = append(device.Sensors, sensors...)
-	repositoryLogger.Debug("Devices successfully retrieved")
+	d.logger.Debug("Devices successfully retrieved")
 
 	return device, nil
 }
 
-func (d *deviceRepository) Delete(ctx context.Context, id int) error {
-	repositoryLogger.Infof("Deleting device with id: %q", id)
-	return executeModifyingQuery(ctx, query.DeleteDevice, d.postgreClient, id)
+func (d *deviceRepository) Delete(ctx context.Context, id, userID int) error {
+	d.logger.Infof("Deleting device with id: %q", id)
+	return executeModifyingQuery(ctx, query.DeleteDevice, d.postgreClient, id, userID)
 }
 
 func (d *deviceRepository) GetDeviceIDByName(ctx context.Context, deviceName string) (int32, error) {
-	repositoryLogger.Infof("Getting device ID by name: %q", deviceName)
+	d.logger.Infof("Getting device ID by name: %q", deviceName)
 	var id int32
 	err := executeSelectQuery(ctx, query.GetDeviceIDByName, d.postgreClient, &id, deviceName)
 	if err != nil {

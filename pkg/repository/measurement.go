@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -11,7 +12,9 @@ import (
 	"github.com/Todorov99/sensorapi/pkg/global"
 	"github.com/Todorov99/sensorapi/pkg/repository/query"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
+	"github.com/Todorov99/sensorcli/pkg/logger"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/sirupsen/logrus"
 )
 
 type MeasurementRepository interface {
@@ -23,8 +26,17 @@ type MeasurementRepository interface {
 	CountMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) (float64, error)
 }
 
+type measurementRepository struct {
+	logger        *logrus.Entry
+	postgreClient *sql.DB
+	influxClient  influxdb2.Client
+	org           string
+	bucket        string
+}
+
 func NewMeasurementRepository() MeasurementRepository {
 	return &measurementRepository{
+		logger:        logger.NewLogrus("deviceRepository", os.Stdout),
 		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
 		influxClient:  config.GetDatabaseCfg().GetInfluxClient(),
 		org:           config.GetDatabaseCfg().GetInfluxOrg(),
@@ -32,15 +44,8 @@ func NewMeasurementRepository() MeasurementRepository {
 	}
 }
 
-type measurementRepository struct {
-	postgreClient *sql.DB
-	influxClient  influxdb2.Client
-	org           string
-	bucket        string
-}
-
 func (m *measurementRepository) GetMeasurementsFromStartingTime(ctx context.Context, startTime string) ([]interface{}, error) {
-	repositoryLogger.Infof("Getting metrics starting from %s", startTime)
+	m.logger.Infof("Getting metrics starting from %s", startTime)
 	return executeSelectQueryInflux(ctx, query.GetAllMeasurementsFromStartTime, true, m.influxClient, m.org, m.bucket)
 }
 
@@ -77,7 +82,7 @@ func (m *measurementRepository) Add(ctx context.Context, measurement entity.Meas
 }
 
 func (m *measurementRepository) GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime string, endTime string, deviceID string, sensorID string) (string, error) {
-	repositoryLogger.Infof("Getting average value of measurements between %s - %s", startTime, endTime)
+	m.logger.Infof("Getting average value of measurements between %s - %s", startTime, endTime)
 	start, err := parseToRFC3339(startTime)
 	if err != nil {
 		return "", err
@@ -104,7 +109,7 @@ func (m *measurementRepository) GetMeasurementsAverageValueBetweenTimestampByDev
 }
 
 func (m *measurementRepository) CountMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) (float64, error) {
-	repositoryLogger.Debugf("Getting the count of measurement values between %s - %s values...", startTime, endTime)
+	m.logger.Debugf("Getting the count of measurement values between %s - %s values...", startTime, endTime)
 	start, err := parseToRFC3339(startTime)
 	if err != nil {
 		return 0, err

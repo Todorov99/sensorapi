@@ -11,54 +11,55 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-type sensorService struct {
-	sensorRepository repository.SensorRepository
+type SensorService interface {
+	GetAll(ctx context.Context) ([]dto.Sensor, error)
+	GetById(ctx context.Context, ID int) (dto.Sensor, error)
+	Update(ctx context.Context, model interface{}) error
 }
 
-func NewSensorService() IService {
+type sensorService struct {
+	sensorRepository repository.SensorRepository
+	userRepository   repository.UserRepository
+}
+
+func NewSensorService() SensorService {
 	return &sensorService{
 		sensorRepository: repository.NewSensorRepository(),
+		userRepository:   repository.NewUserRepository(),
 	}
 }
 
-func (s *sensorService) GetAll(ctx context.Context) (interface{}, error) {
+func (s *sensorService) GetAll(ctx context.Context) ([]dto.Sensor, error) {
 	sensors, err := s.sensorRepository.GetAll(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return sensors, nil
-}
-
-func (s *sensorService) GetById(ctx context.Context, ID int) (interface{}, error) {
-	sensor, err := s.sensorRepository.GetByID(ctx, ID)
+	sensorsDto := []dto.Sensor{}
+	err = mapstructure.Decode(sensors, &sensorsDto)
 	if err != nil {
-		if errors.Is(err, global.ErrorObjectNotFound) {
-			return nil, fmt.Errorf("sensor with ID: %d does not exist", ID)
-		}
 		return nil, err
 	}
 
-	return sensor, nil
+	return sensorsDto, nil
 }
 
-func (s *sensorService) Add(ctx context.Context, model interface{}) error {
-	sensor := dto.Sensor{}
-	err := mapstructure.Decode(model, &sensor)
+func (s *sensorService) GetById(ctx context.Context, ID int) (dto.Sensor, error) {
+	sensor, err := s.sensorRepository.GetByID(ctx, ID)
 	if err != nil {
-		return err
+		if errors.Is(err, global.ErrorObjectNotFound) {
+			return dto.Sensor{}, fmt.Errorf("sensor with ID: %d does not exist", ID)
+		}
+		return dto.Sensor{}, err
 	}
 
-	sensorID, err := s.sensorRepository.GetSensorIDByName(ctx, sensor.Name)
+	sensorsDto := dto.Sensor{}
+	err = mapstructure.Decode(sensor, &sensorsDto)
 	if err != nil {
-		return err
+		return dto.Sensor{}, err
 	}
 
-	if sensorID != "" {
-		return fmt.Errorf("sensor with name: %s already exists", sensor.Name)
-	}
-
-	return s.sensorRepository.Add(ctx, sensor)
+	return sensorsDto, nil
 }
 
 func (s *sensorService) Update(ctx context.Context, model interface{}) error {
@@ -67,6 +68,7 @@ func (s *sensorService) Update(ctx context.Context, model interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	_, err = s.sensorRepository.GetByID(ctx, int(sensor.ID))
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
@@ -74,17 +76,6 @@ func (s *sensorService) Update(ctx context.Context, model interface{}) error {
 		}
 		return err
 	}
+
 	return s.sensorRepository.Update(ctx, sensor)
-}
-
-func (s *sensorService) Delete(ctx context.Context, ID int) (interface{}, error) {
-	sensorForDelete, err := s.sensorRepository.GetByID(ctx, ID)
-	if err != nil {
-		if errors.Is(err, global.ErrorObjectNotFound) {
-			return nil, fmt.Errorf("sensor with ID: %d does not exist", ID)
-		}
-		return nil, err
-	}
-
-	return sensorForDelete, s.sensorRepository.Delete(ctx, ID)
 }

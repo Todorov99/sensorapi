@@ -4,13 +4,15 @@ CREATE TABLE users (
    pass     VARCHAR(1000) NOT NULL,
    first_name    VARCHAR(255) NOT NULL,
    last_name     VARCHAR(1000) NOT NULL,
-   email     VARCHAR(1000) NOT NULL
+   email     VARCHAR(1000) NOT NULL,
+   CONSTRAINT user_id PRIMARY KEY (id)
 );
 
 CREATE TABLE device (
    id serial NOT NULL,
    name    VARCHAR(255) NOT NULL,
    description     VARCHAR(1000) NOT NULL,
+   user_id integer REFERENCES users(id),
    CONSTRAINT device_id PRIMARY KEY (id)
 );
 

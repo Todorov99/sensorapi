@@ -8,6 +8,7 @@ import (
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/Todorov99/sensorapi/pkg/service"
+	"github.com/dgrijalva/jwt-go"
 )
 
 var (
@@ -25,7 +26,7 @@ func NewMeasurementController() *measurementController {
 	}
 }
 
-func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	controllerLogger.Info("Measurement GET query execution.")
 	defer func() {
 		r.Body.Close()
@@ -45,7 +46,7 @@ func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTim
 	response(w, "Measurement GET query execution.", err, timestampMeasurements, http.StatusOK)
 }
 
-func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Request) {
+func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -66,7 +67,7 @@ func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Re
 	response(w, "Measurement POST query execution.", err, measurements, http.StatusOK)
 }
 
-func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -89,7 +90,7 @@ func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *
 	response(w, "Getting sensor average values.", err, averageValue, http.StatusNotFound)
 }
 
-func (m *measurementController) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -109,7 +110,7 @@ func (m *measurementController) GetSensorsCorrelationCoefficient(w http.Response
 	response(w, "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)
 }
 
-func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -126,10 +127,7 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	token, _ := config.ParseToken(w, r)
-	userEmail := config.GetJWTEmailClaim(token)
-
-	done, err := m.measurementService.Monitor(r.Context(), userEmail, monitorDto)
+	done, err := m.measurementService.Monitor(r.Context(), config.GetJWTEmailClaim(token), config.GetJWTUserIDClaim(token), monitorDto)
 	if err != nil {
 		response(w, "Starting the monitoring process failed", err, nil, http.StatusBadRequest)
 		return
@@ -147,13 +145,13 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	deviceID := getIDFromPathVariable(r)
 	monitorStatus := m.measurementService.GetMonitorStatus(deviceID)
 	response(w, "Getting monitor status...", nil, monitorStatus, http.StatusAccepted)
 }
 
-func (m *measurementController) GetReportFile(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetReportFile(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	keys := r.URL.Query()
 	filename := keys.Get("reportFilename")
 	serverFile(w, r, filename)

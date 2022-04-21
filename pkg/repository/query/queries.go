@@ -1,6 +1,6 @@
 package query
 
-//PostresSQL queries
+//PostreSQL queries
 const (
 	//Sensor queries
 	GetSensorNameByID       = "Select name from sensor where id=$1"
@@ -19,17 +19,21 @@ const (
 	//Device queries
 	GetDeviceNameByID = "Select name from device where id=$1"
 	GetDeviceIDByName = "SELECT id FROM device where name=$1"
-	InsertDevice      = `INSERT INTO device(name,description) VALUES ($1,$2)`
-	UpdateDevice      = `UPDATE device set name=$1,description=$2 where id=$3`
-	DeleteDevice      = `DELETE from device where id=$1`
+	InsertDevice      = `INSERT INTO device(name,description,user_id) VALUES ($1,$2,$3)`
 
-	GetDeviceByID      = `SELECT distinct d.id, d.name, d.description from device as d where d.id=$1`
-	GetAllDevices      = `SELECT distinct d.id, d.name, d.description from device_sensor as dv join device as d on dv.device_id = d.id ORDER BY d.id`
+	UpdateUserDevice = `UPDATE device set user_id=$1`
+
+	UpdateDevice = `UPDATE device set name=$1,description=$2 where id=$3 and user_id=$4`
+	DeleteDevice = `DELETE from device where id=$1 and user_id=$2`
+
+	GetDeviceByID      = `SELECT distinct d.id, d.name, d.description from device as d where d.id=$1 and d.user_id=$2`
+	GetAllDevices      = `SELECT distinct d.id, d.name, d.description from device_sensor as dv join device as d on dv.device_id = d.id where d.user_id =$1 ORDER BY d.id`
 	GetHighestDeviceID = "SELECT max(id) + 1 from device"
 
 	//User queries
 	GetHighestUserID = "SELECT max(id) + 1 from users"
 	GetUserIDByName  = "SELECT id FROM users where user_name=$1"
+	GetUserIDByEmail = "SELECT id FROM users where email=$1"
 	GetUserByID      = "SELECT s.user_name s.pass FROM user as u where ID=$1"
 	GetUserByName    = "SELECT * FROM users where user_name=$1"
 	InsertUser       = `INSERT INTO users(user_name,pass,first_name,last_name,email) VALUES ($1,$2,$3,$4,$5)`

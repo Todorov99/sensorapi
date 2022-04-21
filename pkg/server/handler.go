@@ -8,6 +8,7 @@ import (
 	"github.com/Todorov99/sensorapi/pkg/controller"
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
 
@@ -33,9 +34,7 @@ func HandleRequest(port string) error {
 
 	routes.Handle("/api/sensor/all", isAuthorized(sensorController.GetAll)).Methods("GET")
 	routes.Handle("/api/sensor/{id}", isAuthorized(sensorController.GetByID)).Methods("GET")
-	routes.Handle("/api/sensor/add", isAuthorized(sensorController.Post)).Methods("POST")
 	routes.Handle("/api/sensor/{id}", isAuthorized(sensorController.Put)).Methods("PUT")
-	routes.Handle("/api/sensor/{id}", isAuthorized(sensorController.Delete)).Methods("DELETE")
 
 	routes.Handle("/api/measurement", isAuthorized(measurementController.GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp)).Methods("GET")
 	routes.Handle("/api/measurement", isAuthorized(measurementController.AddMeasurement)).Methods("POST")
@@ -49,7 +48,7 @@ func HandleRequest(port string) error {
 	return http.ListenAndServe(fmt.Sprintf(":%s", port), routes)
 }
 
-func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handler {
+func isAuthorized(endpoint func(http.ResponseWriter, *http.Request, *jwt.Token)) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token, httpErr := config.ParseToken(w, r)
 		if httpErr.Error() != nil {
@@ -62,7 +61,7 @@ func isAuthorized(endpoint func(http.ResponseWriter, *http.Request)) http.Handle
 			return
 		}
 		if token.Valid {
-			endpoint(w, r)
+			endpoint(w, r, token)
 		}
 	})
 }

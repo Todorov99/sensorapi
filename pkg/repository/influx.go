@@ -43,12 +43,12 @@ func writePointToBatch(measurementData entity.Measurement, influxClient influxdb
 
 	influxDbPoint, err := createPoint(measurementData)
 	if err != nil {
-		repositoryLogger.Panic(fmt.Errorf("failed creating a influx DB point: %w", err))
+		panic(fmt.Errorf("failed creating a influx DB point: %w", err))
 	}
 
 	err = writeAPI.WritePoint(context.Background(), influxDbPoint)
 	if err != nil {
-		repositoryLogger.Panic(err)
+		panic(err)
 	}
 
 }
@@ -78,7 +78,6 @@ func executeSelectQueryInflux(ctx context.Context, querry string, isType bool, i
 	}
 
 	if queryResult.Err() != nil {
-		repositoryLogger.Errorf("query error: %w", queryResult.Err())
 		return measurement, queryResult.Err()
 	}
 
