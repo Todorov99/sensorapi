@@ -38,6 +38,7 @@ func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTim
 		return
 	}
 
+	measurementsBetweeTimestamp.UserID = config.GetJWTUserIDClaim(token)
 	timestampMeasurements, err := m.measurementService.GetMeasurementsBetweenTimestamp(r.Context(), measurementsBetweeTimestamp)
 	if err != nil {
 		response(w, "Get all measurements between timestamp finished with error", err, nil, http.StatusBadRequest)
@@ -59,6 +60,7 @@ func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	measurements.UserID = config.GetJWTUserIDClaim(token)
 	err = s.measurementService.AddMeasurements(r.Context(), measurements)
 	if err != nil {
 		response(w, "Measurement POST query execution.", err, measurements, http.StatusConflict)
@@ -80,7 +82,7 @@ func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *
 	startTime := keys["startTime"][0]
 	endTime := keys["endTime"][0]
 
-	averageVal, err := m.measurementService.GetAverageValueOfMeasurements(r.Context(), deviceID, sensorID, startTime, endTime)
+	averageVal, err := m.measurementService.GetAverageValueOfMeasurements(r.Context(), deviceID, sensorID, startTime, endTime, config.GetJWTUserIDClaim(token))
 	if err != nil {
 		response(w, "Failed getting average value", err, 0, http.StatusNotFound)
 		return
@@ -105,7 +107,7 @@ func (m *measurementController) GetSensorsCorrelationCoefficient(w http.Response
 	startTime := keys["startTime"][0]
 	endTime := keys["endTime"][0]
 
-	coefficient, err := m.measurementService.GetSensorsCorrelationCoefficient(r.Context(), deviceId1, deviceId2, sensorId1, sensorId2, startTime, endTime)
+	coefficient, err := m.measurementService.GetSensorsCorrelationCoefficient(r.Context(), deviceId1, deviceId2, sensorId1, sensorId2, startTime, endTime, config.GetJWTUserIDClaim(token))
 	correlationCoefficient["correlationCoefficient"] = coefficient
 	response(w, "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)
 }
@@ -122,7 +124,7 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	if m.measurementService.GetMonitorStatus(monitorDto.DeviceID).Status == service.StateInProgress {
+	if m.measurementService.GetMonitorStatus(monitorDto.DeviceID, config.GetJWTUserIDClaim(token)).Status == service.StateInProgress {
 		response(w, "There is running measurement", fmt.Errorf("running process"), nil, http.StatusBadRequest)
 		return
 	}
@@ -147,7 +149,7 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request, 
 
 func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	deviceID := getIDFromPathVariable(r)
-	monitorStatus := m.measurementService.GetMonitorStatus(deviceID)
+	monitorStatus := m.measurementService.GetMonitorStatus(deviceID, config.GetJWTUserIDClaim(token))
 	response(w, "Getting monitor status...", nil, monitorStatus, http.StatusAccepted)
 }
 

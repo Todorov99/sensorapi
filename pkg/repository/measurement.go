@@ -19,11 +19,11 @@ import (
 
 type MeasurementRepository interface {
 	Add(ctx context.Context, measuerement entity.Measurement) error
-	GetMeasurementsFromStartingTime(ctx context.Context, startTime string) ([]interface{}, error)
-	GetMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) ([]interface{}, error)
-	GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) ([]interface{}, error)
-	GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) (string, error)
-	CountMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) (float64, error)
+	GetMeasurementsFromStartingTime(ctx context.Context, startTime string, userID int) ([]interface{}, error)
+	GetMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) ([]interface{}, error)
+	GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) ([]interface{}, error)
+	GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) (string, error)
+	CountMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) (float64, error)
 }
 
 type measurementRepository struct {
@@ -44,12 +44,13 @@ func NewMeasurementRepository() MeasurementRepository {
 	}
 }
 
-func (m *measurementRepository) GetMeasurementsFromStartingTime(ctx context.Context, startTime string) ([]interface{}, error) {
-	m.logger.Infof("Getting metrics starting from %s", startTime)
-	return executeSelectQueryInflux(ctx, query.GetAllMeasurementsFromStartTime, true, m.influxClient, m.org, m.bucket)
+func (m *measurementRepository) GetMeasurementsFromStartingTime(ctx context.Context, startTime string, userID int) ([]interface{}, error) {
+	m.logger.Infof("Getting metrics starting from %s for user with ID: %d", startTime, userID)
+	influxQuery := fmt.Sprintf(query.GetAllMeasurementsFromStartTime, m.bucket, startTime, userID)
+	return executeSelectQueryInflux(ctx, influxQuery, true, m.influxClient, m.org, m.bucket)
 }
 
-func (m *measurementRepository) GetMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) ([]interface{}, error) {
+func (m *measurementRepository) GetMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) ([]interface{}, error) {
 	start, err := parseToRFC3339(startTime)
 	if err != nil {
 		return nil, err
@@ -60,7 +61,7 @@ func (m *measurementRepository) GetMeasurementsBetweenTimestampByDeviceIDBySenso
 		return nil, err
 	}
 
-	influxQuery := fmt.Sprintf(query.GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId, m.bucket, start, end, deviceID, sensorID)
+	influxQuery := fmt.Sprintf(query.GetMeasurementsBeetweenTimestampByDeviceIdAndSensorId, m.bucket, start, end, deviceID, sensorID, userID)
 
 	measurements, err := executeSelectQueryInflux(ctx, influxQuery, true, m.influxClient, m.org, m.bucket)
 	if err != nil {
@@ -81,7 +82,7 @@ func (m *measurementRepository) Add(ctx context.Context, measurement entity.Meas
 	return nil
 }
 
-func (m *measurementRepository) GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime string, endTime string, deviceID string, sensorID string) (string, error) {
+func (m *measurementRepository) GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) (string, error) {
 	m.logger.Infof("Getting average value of measurements between %s - %s", startTime, endTime)
 	start, err := parseToRFC3339(startTime)
 	if err != nil {
@@ -93,23 +94,23 @@ func (m *measurementRepository) GetMeasurementsAverageValueBetweenTimestampByDev
 		return "", err
 	}
 
-	influxQuery := fmt.Sprintf(query.GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId, m.bucket, start, end, deviceID, sensorID)
+	influxQuery := fmt.Sprintf(query.GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId, m.bucket, start, end, deviceID, sensorID, userID)
 	average, err := executeSelectQueryInflux(ctx, influxQuery, true, m.influxClient, m.org, m.bucket)
 	if err != nil {
 		if strings.Contains(err.Error(), "cannot query an empty range") {
-			return "", fmt.Errorf("not available maeasurements in the concrete timestamp %s - %s", startTime, endTime)
+			return "", fmt.Errorf("not available maeasurements in the concrete timestamp %s - %s for user with ID: %d", startTime, endTime, userID)
 		}
 		return "", err
 	}
 
 	if len(average) == 0 {
-		return "", fmt.Errorf("not available maeasurements in the concrete timestamp %s - %s", startTime, endTime)
+		return "", fmt.Errorf("not available maeasurements in the concrete timestamp %s - %s for user with ID: %d", startTime, endTime, userID)
 	}
 	return average[0].(entity.Measurement).Value, nil
 }
 
-func (m *measurementRepository) CountMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) (float64, error) {
-	m.logger.Debugf("Getting the count of measurement values between %s - %s values...", startTime, endTime)
+func (m *measurementRepository) CountMeasurementsBetweenTimestampByDeviceIDBySensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) (float64, error) {
+	m.logger.Debugf("Getting the count of measurement values between %s - %s for user with ID: %d values...", startTime, endTime, userID)
 	start, err := parseToRFC3339(startTime)
 	if err != nil {
 		return 0, err
@@ -120,19 +121,19 @@ func (m *measurementRepository) CountMeasurementsBetweenTimestampByDeviceIDBySen
 		return 0, err
 	}
 
-	valueCount, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.CountMeasurementValues, m.bucket, start, end, deviceID, sensorID), false, m.influxClient, m.org, m.bucket)
+	valueCount, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.CountMeasurementValues, m.bucket, start, end, deviceID, sensorID, userID), false, m.influxClient, m.org, m.bucket)
 	if err != nil {
 		return 0, err
 	}
 
 	if len(valueCount) == 0 {
-		return 0, fmt.Errorf("not available maeasurements in the concrete timestamp %s - %s", startTime, endTime)
+		return 0, fmt.Errorf("not available maeasurements in the concrete timestamp %s - %s for user with ID: %d", startTime, endTime, userID)
 	}
 
 	return parseFloat(valueCount[0]), nil
 }
 
-func (m *measurementRepository) GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string) ([]interface{}, error) {
+func (m *measurementRepository) GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(ctx context.Context, startTime, endTime, deviceID, sensorID string, userID int) ([]interface{}, error) {
 	start, err := parseToRFC3339(startTime)
 	if err != nil {
 		return nil, err
@@ -143,7 +144,7 @@ func (m *measurementRepository) GetMeasurementsValuesBetweenTimestampByDeviceIDA
 		return nil, err
 	}
 
-	values, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, m.bucket, start, end, deviceID, sensorID), false, m.influxClient, m.org, m.bucket)
+	values, err := executeSelectQueryInflux(ctx, fmt.Sprintf(query.GetMeasurementValuesByDeviceAndSensorIdBeetweenTimestamp, m.bucket, start, end, deviceID, sensorID, userID), false, m.influxClient, m.org, m.bucket)
 	if err != nil {
 		return nil, err
 	}

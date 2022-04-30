@@ -178,6 +178,10 @@ func (d *deviceService) Update(ctx context.Context, model interface{}, userID in
 }
 
 func (d *deviceService) Delete(ctx context.Context, deviceID, userID int) (interface{}, error) {
+	if deviceID == 1 && userID == 1 {
+		return nil, fmt.Errorf("your are not allowed to delete your default device")
+	}
+
 	deviceForDelete, err := d.deviceRepository.GetByID(ctx, deviceID, userID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {

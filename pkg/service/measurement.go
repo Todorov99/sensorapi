@@ -31,9 +31,9 @@ const (
 
 type MeasurementService interface {
 	Monitor(ctx context.Context, email string, userID int, monitorDto dto.MonitorDto) (<-chan bool, error)
-	GetMonitorStatus(deviceID int) dto.MonitorStatus
-	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error)
-	GetAverageValueOfMeasurements(ctx context.Context, deviceID, sensorID, startTime, endTime string) (string, error)
+	GetMonitorStatus(deviceID, userID int) dto.MonitorStatus
+	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string, userID int) (float64, error)
+	GetAverageValueOfMeasurements(ctx context.Context, deviceID, sensorID, startTime, endTime string, userID int) (string, error)
 	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
 	AddMeasurements(ctx context.Context, measurement dto.Measurement) error
 }
@@ -45,7 +45,7 @@ type measurementService struct {
 	sensorRepository      repository.SensorRepository
 	userRepository        repository.UserRepository
 	mailsenderClt         *mailsender.Client
-	monitorProcesses      map[int]*monitorState
+	monitorProcesses      map[int]map[int]*monitorState
 }
 
 type monitorState struct {
@@ -66,13 +66,19 @@ func NewMeasurementService() MeasurementService {
 		deviceRepository:      repository.NewDeviceRepository(),
 		userRepository:        repository.NewUserRepository(),
 		mailsenderClt:         mailsender.New(),
-		monitorProcesses:      make(map[int]*monitorState),
+		monitorProcesses:      make(map[int]map[int]*monitorState),
 	}
 }
 
 func (m measurementService) Monitor(ctx context.Context, email string, userID int, monitorDto dto.MonitorDto) (<-chan bool, error) {
 	m.logger.Debug("Starting monitoring...")
 	done := make(chan bool)
+
+	//TODO as preliminary version we have restrictions for collecting measurements from the hardware.
+	// To be improved CLI to be transported to the remote host via SSH for remote executino and collection the metrics
+	if userID != 1 {
+		return nil, fmt.Errorf("monitor process can not be started from this request for user with ID: %d. Get the CLI tool and start it from the host where you want to collect metrics", userID)
+	}
 
 	device, err := m.deviceRepository.GetByID(ctx, monitorDto.DeviceID, userID)
 	if err != nil {
@@ -113,7 +119,9 @@ func (m measurementService) Monitor(ctx context.Context, email string, userID in
 		monState := &monitorState{}
 		monState.startTime = startTime
 
-		m.monitorProcesses[monitorDto.DeviceID] = monState
+		m.monitorProcesses[userID] = map[int]*monitorState{
+			monitorDto.DeviceID: monState,
+		}
 
 		defer func() {
 			close(done)
@@ -151,7 +159,7 @@ func (m measurementService) Monitor(ctx context.Context, email string, userID in
 					return
 				}
 
-				metric, err := m.scanMetrics(ctx, measurements, monitorDto.MetricValueCfg, true)
+				metric, err := m.scanMetrics(ctx, measurements, userID, monitorDto.MetricValueCfg, true)
 				if err != nil {
 					var merr error
 					merr = multierror.Append(merr, err)
@@ -215,8 +223,9 @@ func (m measurementService) Monitor(ctx context.Context, email string, userID in
 	return done, nil
 }
 
-func (m measurementService) GetMonitorStatus(deviceID int) dto.MonitorStatus {
-	monState := m.monitorProcesses[deviceID]
+func (m measurementService) GetMonitorStatus(deviceID int, userID int) dto.MonitorStatus {
+	userMonState := m.monitorProcesses[userID]
+	monState := userMonState[deviceID]
 
 	if monState == nil {
 		return dto.MonitorStatus{
@@ -253,13 +262,13 @@ func (m measurementService) GetMonitorStatus(deviceID int) dto.MonitorStatus {
 	}
 }
 
-func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, deviceID string, sensorID string, startTime, endTime string) (string, error) {
+func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, deviceID, sensorID, startTime, endTime string, userID int) (string, error) {
 	err := m.ifDeviceAndSensorExists(ctx, deviceID, sensorID)
 	if err != nil {
 		return "", err
 	}
 
-	averageValue, err := m.measurementRepository.GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx, startTime, endTime, deviceID, sensorID)
+	averageValue, err := m.measurementRepository.GetMeasurementsAverageValueBetweenTimestampByDeviceIDAndSensorID(ctx, startTime, endTime, deviceID, sensorID, userID)
 	if err != nil {
 		return "", err
 	}
@@ -280,6 +289,7 @@ func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context,
 			measurementsBetweeTimestamp.EndTime,
 			measurementsBetweeTimestamp.DeviceID,
 			measurementsBetweeTimestamp.SensorID,
+			measurementsBetweeTimestamp.UserID,
 		)
 	if err != nil {
 		return nil, err
@@ -306,7 +316,7 @@ func (m measurementService) AddMeasurements(ctx context.Context, measurement dto
 	return m.measurementRepository.Add(ctx, measurementEntity)
 }
 
-func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Measurment, valueCfg dto.ValueCfg, addToDb bool) ([]sensor.Measurment, error) {
+func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Measurment, userID int, valueCfg dto.ValueCfg, addToDb bool) ([]sensor.Measurment, error) {
 	criticalMeasurements := []sensor.Measurment{}
 	var merr error
 	for _, metr := range metrics {
@@ -316,6 +326,7 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 				Value:      metr.Value,
 				SensorID:   metr.SensorID,
 				DeviceID:   metr.DeviceID,
+				UserID:     userID,
 			}
 
 			err := m.measurementRepository.Add(ctx, measurementEntity)
@@ -371,16 +382,22 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 }
 
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
-func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string) (float64, error) {
+func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string, userID int) (float64, error) {
 	m.logger.Info("Getting correlation coficient...")
-	err := m.ifDeviceAndSensorExists(context.Background(), deviceID1, sensorID1)
+	err := m.ifDeviceAndSensorExists(ctx, deviceID1, sensorID1)
 	if err != nil {
 		return 0, err
 	}
+
+	err = m.ifDeviceAndSensorExists(ctx, deviceID2, sensorID2)
+	if err != nil {
+		return 0, err
+	}
+
 	m.logger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID1, sensorID1)
 	firstSensorValues, err := m.measurementRepository.
 		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
-			ctx, startTime, endTime, deviceID1, sensorID1)
+			ctx, startTime, endTime, deviceID1, sensorID1, userID)
 	if err != nil {
 		return 0, err
 	}
@@ -388,7 +405,7 @@ func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context
 	m.logger.Infof("Getting values for deviceID: %s and sensorID %s...", deviceID2, sensorID2)
 	secondSensorValues, err := m.measurementRepository.
 		GetMeasurementsValuesBetweenTimestampByDeviceIDAndSensorID(
-			ctx, startTime, endTime, deviceID2, sensorID2)
+			ctx, startTime, endTime, deviceID2, sensorID2, userID)
 	if err != nil {
 		return 0, err
 	}
@@ -396,7 +413,7 @@ func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context
 	m.logger.Info("Getting the count of values...")
 	countOfMeasurements, err := m.measurementRepository.
 		CountMeasurementsBetweenTimestampByDeviceIDBySensorID(
-			ctx, startTime, endTime, deviceID1, sensorID1,
+			ctx, startTime, endTime, deviceID1, sensorID1, userID,
 		)
 	if err != nil {
 		return 0, err

@@ -24,12 +24,11 @@ func createPoint(data entity.Measurement) (*write.Point, error) {
 		return nil, err
 	}
 
-	tags := map[string]string{"deviceID": data.DeviceID, "sensorID": data.SensorID}
+	tags := map[string]string{"deviceID": data.DeviceID, "sensorID": data.SensorID, "userID": strconv.Itoa(data.UserID)}
 	fields := map[string]interface{}{
 		"value": value,
 	}
 
-	fmt.Println(measurementTime)
 	point := influxdb2.NewPoint("sensor", tags, fields, measurementTime)
 	return point, nil
 }

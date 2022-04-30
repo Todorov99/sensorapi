@@ -48,13 +48,13 @@ const (
 	|> range(start: 1999-09-04T23:30:00Z)
 	|> filter(fn: (r) => r["_time"] >= %s and r["_time"] <= %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
-	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s" and r["userID"] == "%d")
 	`
 	GetAverageValueOfMeasurementsBetweenTimeStampByDeviceIdAndSensorId = `from(bucket: "%s")
 	|> range(start: 1999-09-04T23:30:00Z)
 	|> filter(fn: (r) => r["_time"] >= %s and r["_time"] <= %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
-	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s" and r["userID"] == "%d")
 	|> mean()
 	`
 
@@ -62,7 +62,7 @@ const (
 	|> range(start: 1999-09-04T23:30:00Z)
 	|> filter(fn: (r) => r["_time"] >= %s and r["_time"] <= %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
-	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s" and r["userID"] == "%d")
 	|> keep(columns: ["_value"])
 	`
 
@@ -70,13 +70,13 @@ const (
 	|> range(start: 1999-09-04T23:30:00Z)
 	|> filter(fn: (r) => r["_time"] >= %s and r["_time"] <= %s)
 	|> filter(fn: (r) => r["_measurement"] == "sensor")
-	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s")
+	|> filter(fn: (r) => r["deviceID"] == "%s" and r["sensorID"] == "%s" and r["userID"] == "%d")
 	|> count()
 	`
 
 	GetAllMeasurementsFromStartTime = `from(bucket: "%s")
 	|> range(start: 1999-09-04T23:30:00Z)
 	|> filter(fn: (r) => r["_time"] >= %s)
-	|> filter(fn: (r) => r["_measurement"] == "sensor")
+	|> filter(fn: (r) => r["_measurement"] == "sensor" and r["userID"] == "%d")
 	`
 )
