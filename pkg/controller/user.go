@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/Todorov99/sensorapi/pkg/dto"
@@ -23,11 +24,15 @@ func (l *userController) Login(w http.ResponseWriter, r *http.Request) {
 		r.Body.Close()
 	}()
 
-	login := dto.Login{}
-	err := json.NewDecoder(r.Body).Decode(&login)
-	if err != nil {
-		response(w, "Failed decoding ", err, login, http.StatusInternalServerError)
+	username, password, ok := r.BasicAuth()
+	if !ok {
+		response(w, "Failed log in ", fmt.Errorf("invalid user: %s password", username), nil, http.StatusForbidden)
 		return
+	}
+
+	login := dto.Login{
+		UserName: username,
+		Password: password,
 	}
 
 	token, err := l.userService.Login(r.Context(), login)

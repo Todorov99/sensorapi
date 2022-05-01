@@ -17,8 +17,8 @@ const (
 	GetSensorByName        = "SELECT id from sensor where name=$1"
 
 	//Device queries
-	GetDeviceNameByID = "Select name from device where id=$1"
-	GetDeviceIDByName = "SELECT id FROM device where name=$1"
+	GetDeviceNameByID = "Select d.name from device as d where d.id=$1 and d.user_id=$2"
+	GetDeviceIDByName = "SELECT id FROM device as d where d.name=$1 and d.user_id=$2"
 	InsertDevice      = `INSERT INTO device(name,description,user_id) VALUES ($1,$2,$3)`
 
 	UpdateUserDevice = `UPDATE device set user_id=$1`

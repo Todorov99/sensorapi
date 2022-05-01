@@ -54,6 +54,7 @@ func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Re
 
 	controllerLogger.Info("Measurement POST query execution.")
 
+	measurements.UserID = config.GetJWTUserIDClaim(token)
 	err := json.NewDecoder(r.Body).Decode(&measurements)
 	if err != nil {
 		response(w, "Measurement Get query", err, measurements, 500)
@@ -61,6 +62,7 @@ func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Re
 	}
 
 	measurements.UserID = config.GetJWTUserIDClaim(token)
+
 	err = s.measurementService.AddMeasurements(r.Context(), measurements)
 	if err != nil {
 		response(w, "Measurement POST query execution.", err, measurements, http.StatusConflict)

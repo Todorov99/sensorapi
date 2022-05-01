@@ -263,7 +263,7 @@ func (m measurementService) GetMonitorStatus(deviceID int, userID int) dto.Monit
 }
 
 func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, deviceID, sensorID, startTime, endTime string, userID int) (string, error) {
-	err := m.ifDeviceAndSensorExists(ctx, deviceID, sensorID)
+	err := m.ifDeviceAndSensorExists(ctx, deviceID, sensorID, userID)
 	if err != nil {
 		return "", err
 	}
@@ -277,7 +277,7 @@ func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, d
 }
 
 func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error) {
-	err := m.ifDeviceAndSensorExists(ctx, measurementsBetweeTimestamp.DeviceID, measurementsBetweeTimestamp.SensorID)
+	err := m.ifDeviceAndSensorExists(ctx, measurementsBetweeTimestamp.DeviceID, measurementsBetweeTimestamp.SensorID, measurementsBetweeTimestamp.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -308,8 +308,13 @@ func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context,
 }
 
 func (m measurementService) AddMeasurements(ctx context.Context, measurement dto.Measurement) error {
+	err := m.ifDeviceAndSensorExists(ctx, measurement.DeviceID, measurement.SensorID, measurement.UserID)
+	if err != nil {
+		return err
+	}
+
 	measurementEntity := entity.Measurement{}
-	err := mapstructure.Decode(measurement, &measurementEntity)
+	err = mapstructure.Decode(measurement, &measurementEntity)
 	if err != nil {
 		return err
 	}
@@ -384,12 +389,12 @@ func (m measurementService) scanMetrics(ctx context.Context, metrics []sensor.Me
 // GetSensorsCorrelationCoefficient gets Pearson's correlation coefficient between two sensors.
 func (m measurementService) GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string, userID int) (float64, error) {
 	m.logger.Info("Getting correlation coficient...")
-	err := m.ifDeviceAndSensorExists(ctx, deviceID1, sensorID1)
+	err := m.ifDeviceAndSensorExists(ctx, deviceID1, sensorID1, userID)
 	if err != nil {
 		return 0, err
 	}
 
-	err = m.ifDeviceAndSensorExists(ctx, deviceID2, sensorID2)
+	err = m.ifDeviceAndSensorExists(ctx, deviceID2, sensorID2, userID)
 	if err != nil {
 		return 0, err
 	}
@@ -451,12 +456,12 @@ func correlationCoefficient(firstSensorValues []interface{}, secondSensorValues 
 			(valueCount*squareSumSecondSensor - sumSecondSensor*sumSecondSensor))))
 }
 
-func (m *measurementService) ifDeviceAndSensorExists(ctx context.Context, deviceID, sensorID string) error {
+func (m *measurementService) ifDeviceAndSensorExists(ctx context.Context, deviceID, sensorID string, userID int) error {
 	dID, err := strconv.Atoi(deviceID)
 	if err != nil {
 		return err
 	}
-	_, err = m.deviceRepository.GetDeviceNameByID(ctx, dID)
+	_, err = m.deviceRepository.GetDeviceNameByID(ctx, dID, userID)
 	if err != nil {
 		if errors.Is(err, global.ErrorObjectNotFound) {
 			return fmt.Errorf("device with id: %d does not exist", dID)

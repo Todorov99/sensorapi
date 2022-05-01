@@ -21,7 +21,7 @@ func HandleRequest(port string) error {
 	sensorController := controller.NewSensorController()
 	userController := controller.NewUserController()
 
-	routes.HandleFunc("/api/users/login", userController.Login).Methods("Get")
+	routes.HandleFunc("/api/users/login", userController.Login).Methods("GET", "POST")
 	routes.HandleFunc("/api/users/register", userController.Register).Methods("POST")
 
 	routes.Handle("/api/device/generate/config/{id}", isAuthorized(deviceController.GenerateDeviceCfg)).Methods("GET")

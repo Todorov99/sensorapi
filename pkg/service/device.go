@@ -120,7 +120,7 @@ func (d *deviceService) Add(ctx context.Context, model interface{}, userID int) 
 		return err
 	}
 
-	err = d.ifDeviceExist(ctx, device.Name)
+	err = d.ifDeviceExist(ctx, device.Name, userID)
 	if errors.Is(err, global.ErrorDeviceWithNameAlreadyExist) {
 		return fmt.Errorf("device with name %s already exists", device.Name)
 	}
@@ -134,7 +134,7 @@ func (d *deviceService) Add(ctx context.Context, model interface{}, userID int) 
 		return err
 	}
 
-	deviceID, err := d.deviceRepository.GetDeviceIDByName(ctx, device.Name)
+	deviceID, err := d.deviceRepository.GetDeviceIDByName(ctx, device.Name, userID)
 	if err != nil {
 		return err
 	}
@@ -204,8 +204,8 @@ func (d *deviceService) Delete(ctx context.Context, deviceID, userID int) (inter
 	return device, nil
 }
 
-func (d *deviceService) ifDeviceExist(ctx context.Context, deviceName string) error {
-	checkForExistingDevice, err := d.deviceRepository.GetDeviceIDByName(ctx, deviceName)
+func (d *deviceService) ifDeviceExist(ctx context.Context, deviceName string, userId int) error {
+	checkForExistingDevice, err := d.deviceRepository.GetDeviceIDByName(ctx, deviceName, userId)
 	if err != nil && !errors.Is(err, global.ErrorObjectNotFound) {
 		return err
 	}
