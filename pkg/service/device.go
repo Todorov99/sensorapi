@@ -3,6 +3,7 @@ package service
 import (
 	"archive/zip"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -83,6 +84,11 @@ func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID 
 	}
 
 	_, err = f.Write(deviceBytes)
+	if err != nil {
+		return "", err
+	}
+
+	err = createFileChecksum(global.CfgFileName)
 	if err != nil {
 		return "", err
 	}
@@ -316,6 +322,33 @@ func copyBinary(sourceDir, OS, dest string) error {
 	defer new.Close()
 
 	_, err = io.Copy(new, original)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func createFileChecksum(filepath string) error {
+	h := sha256.New()
+	f, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		f.Close()
+	}()
+
+	if _, err := io.Copy(h, f); err != nil {
+		return err
+	}
+
+	checkSumFile, err := os.Create(global.DeviceCfgChecksum)
+	if err != nil {
+		return err
+	}
+	_, err = checkSumFile.WriteString(fmt.Sprintf("%x", h.Sum(nil)))
 	if err != nil {
 		return err
 	}

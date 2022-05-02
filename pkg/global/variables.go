@@ -25,6 +25,7 @@ const (
 	CliResourceDir          = "./cliresources"
 	CliBinariesDir          = "./binaries"
 	CliZipCfg               = "cli_cfg.zip"
+	DeviceCfgChecksum       = "./cliresources/.checksum"
 )
 
 const (
