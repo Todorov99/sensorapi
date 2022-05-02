@@ -1,3 +1,4 @@
 *.log
 webserver
 thermal
+.DS_Store
