@@ -1,10 +1,13 @@
 package service
 
 import (
+	"archive/zip"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/entity"
@@ -43,7 +46,15 @@ func NewDeviceService() DeviceService {
 
 func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID int) (string, error) {
 	d.logger.Debug("Generating device cfg...")
-	cfgFileName := "device_cfg.yaml"
+	cfgFileName := "./cliresources/device_cfg.yaml"
+
+	cliZipCfg := "cli_cfg.zip"
+
+	err := os.MkdirAll("./cliresources", 0777)
+	if err != nil {
+		return "", err
+	}
+
 	dd, err := d.GetById(ctx, deviceID, userID)
 	if err != nil {
 		return "", err
@@ -74,8 +85,13 @@ func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID 
 		return "", err
 	}
 
+	err = zipSource("./cliresources", cliZipCfg)
+	if err != nil {
+		return "", err
+	}
+
 	d.logger.Debug("Device cfg successfully generated")
-	return cfgFileName, nil
+	return cliZipCfg, nil
 }
 
 func (d *deviceService) GetAll(ctx context.Context, userID int) (interface{}, error) {
@@ -215,4 +231,54 @@ func (d *deviceService) ifDeviceExist(ctx context.Context, deviceName string, us
 	}
 
 	return nil
+}
+
+func zipSource(source, target string) error {
+	f, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	writer := zip.NewWriter(f)
+	defer writer.Close()
+
+	return filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+
+		header.Method = zip.Deflate
+
+		header.Name, err = filepath.Rel(filepath.Dir(source), path)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			header.Name += "/"
+		}
+
+		headerWriter, err := writer.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		f, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		_, err = io.Copy(headerWriter, f)
+		return err
+	})
 }
