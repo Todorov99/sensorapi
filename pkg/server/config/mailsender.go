@@ -11,7 +11,7 @@ type mailSender struct {
 }
 
 func NewMailSender(applicationProperties *ApplicationProperties) *mailSender {
-	port := applicationProperties.MailSender.Port
+	port := applicationProperties.Services.MailSender.Port
 
 	if strings.HasPrefix(port, "${") {
 		str := strings.TrimPrefix(port, "${")
@@ -20,7 +20,7 @@ func NewMailSender(applicationProperties *ApplicationProperties) *mailSender {
 	}
 
 	return &mailSender{
-		serviceName: applicationProperties.MailSender.ServiceName,
+		serviceName: applicationProperties.Services.MailSender.ServiceName,
 		port:        port,
 	}
 }

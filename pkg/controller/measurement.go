@@ -8,6 +8,7 @@ import (
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/Todorov99/sensorapi/pkg/service"
+	"github.com/dgrijalva/jwt-go"
 )
 
 var (
@@ -25,7 +26,7 @@ func NewMeasurementController() *measurementController {
 	}
 }
 
-func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTimestamp(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	controllerLogger.Info("Measurement GET query execution.")
 	defer func() {
 		r.Body.Close()
@@ -37,6 +38,7 @@ func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTim
 		return
 	}
 
+	measurementsBetweeTimestamp.UserID = config.GetJWTUserIDClaim(token)
 	timestampMeasurements, err := m.measurementService.GetMeasurementsBetweenTimestamp(r.Context(), measurementsBetweeTimestamp)
 	if err != nil {
 		response(w, "Get all measurements between timestamp finished with error", err, nil, http.StatusBadRequest)
@@ -45,18 +47,21 @@ func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTim
 	response(w, "Measurement GET query execution.", err, timestampMeasurements, http.StatusOK)
 }
 
-func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Request) {
+func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
 
 	controllerLogger.Info("Measurement POST query execution.")
 
+	measurements.UserID = config.GetJWTUserIDClaim(token)
 	err := json.NewDecoder(r.Body).Decode(&measurements)
 	if err != nil {
 		response(w, "Measurement Get query", err, measurements, 500)
 		return
 	}
+
+	measurements.UserID = config.GetJWTUserIDClaim(token)
 
 	err = s.measurementService.AddMeasurements(r.Context(), measurements)
 	if err != nil {
@@ -66,7 +71,7 @@ func (s *measurementController) AddMeasurement(w http.ResponseWriter, r *http.Re
 	response(w, "Measurement POST query execution.", err, measurements, http.StatusOK)
 }
 
-func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -79,7 +84,7 @@ func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *
 	startTime := keys["startTime"][0]
 	endTime := keys["endTime"][0]
 
-	averageVal, err := m.measurementService.GetAverageValueOfMeasurements(r.Context(), deviceID, sensorID, startTime, endTime)
+	averageVal, err := m.measurementService.GetAverageValueOfMeasurements(r.Context(), deviceID, sensorID, startTime, endTime, config.GetJWTUserIDClaim(token))
 	if err != nil {
 		response(w, "Failed getting average value", err, 0, http.StatusNotFound)
 		return
@@ -89,7 +94,7 @@ func (m *measurementController) GetSensorAverageValue(w http.ResponseWriter, r *
 	response(w, "Getting sensor average values.", err, averageValue, http.StatusNotFound)
 }
 
-func (m *measurementController) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetSensorsCorrelationCoefficient(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -104,23 +109,15 @@ func (m *measurementController) GetSensorsCorrelationCoefficient(w http.Response
 	startTime := keys["startTime"][0]
 	endTime := keys["endTime"][0]
 
-	coefficient, err := m.measurementService.GetSensorsCorrelationCoefficient(r.Context(), deviceId1, deviceId2, sensorId1, sensorId2, startTime, endTime)
+	coefficient, err := m.measurementService.GetSensorsCorrelationCoefficient(r.Context(), deviceId1, deviceId2, sensorId1, sensorId2, startTime, endTime, config.GetJWTUserIDClaim(token))
 	correlationCoefficient["correlationCoefficient"] = coefficient
 	response(w, "Getting Correlation Coefficient.", err, correlationCoefficient, http.StatusNotFound)
 }
 
-func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
-
-	if m.measurementService.GetMonitorStatus().Status == service.StateInProgress {
-		response(w, "There is running measurement", fmt.Errorf("running process"), nil, http.StatusBadRequest)
-		return
-	}
-
-	token, _ := config.ParseToken(w, r)
-	userEmail := config.GetJWTEmailClaim(token)
 
 	monitorDto := dto.MonitorDto{}
 	decodeErr := json.NewDecoder(r.Body).Decode(&monitorDto)
@@ -129,7 +126,12 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	done, err := m.measurementService.Monitor(r.Context(), userEmail, monitorDto)
+	if m.measurementService.GetMonitorStatus(monitorDto.DeviceID, config.GetJWTUserIDClaim(token)).Status == service.StateInProgress {
+		response(w, "There is running measurement", fmt.Errorf("running process"), nil, http.StatusBadRequest)
+		return
+	}
+
+	done, err := m.measurementService.Monitor(r.Context(), config.GetJWTEmailClaim(token), config.GetJWTUserIDClaim(token), monitorDto)
 	if err != nil {
 		response(w, "Starting the monitoring process failed", err, nil, http.StatusBadRequest)
 		return
@@ -147,12 +149,13 @@ func (m *measurementController) Monitor(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Request) {
-	monitorStatus := m.measurementService.GetMonitorStatus()
+func (m *measurementController) MonitorStatus(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
+	deviceID := getIDFromPathVariable(r)
+	monitorStatus := m.measurementService.GetMonitorStatus(deviceID, config.GetJWTUserIDClaim(token))
 	response(w, "Getting monitor status...", nil, monitorStatus, http.StatusAccepted)
 }
 
-func (m *measurementController) GetReportFile(w http.ResponseWriter, r *http.Request) {
+func (m *measurementController) GetReportFile(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	keys := r.URL.Query()
 	filename := keys.Get("reportFilename")
 	serverFile(w, r, filename)

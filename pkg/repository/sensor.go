@@ -4,32 +4,39 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/entity"
 	"github.com/Todorov99/sensorapi/pkg/repository/query"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
+	"github.com/Todorov99/sensorcli/pkg/logger"
+	"github.com/sirupsen/logrus"
 )
 
 type SensorRepository interface {
 	GetSensorIDByName(ctx context.Context, name string) (string, error)
 	GetSensorGroupByName(ctx context.Context, sensorGroup string) (string, error)
 	GetSensorByDeviceID(ctx context.Context, deviceID string) ([]entity.Sensor, error)
-	IRepository
+	GetAll(ctx context.Context) (interface{}, error)
+	GetByID(ctx context.Context, sensorID int) (interface{}, error)
+	Update(ctx context.Context, entity interface{}) error
 }
 
 type sensorRepository struct {
+	logger        *logrus.Entry
 	postgreClient *sql.DB
 }
 
 func NewSensorRepository() SensorRepository {
 	return &sensorRepository{
+		logger:        logger.NewLogrus("deviceRepository", os.Stdout),
 		postgreClient: config.GetDatabaseCfg().GetPostgreClient(),
 	}
 }
 
 func (s *sensorRepository) GetAll(ctx context.Context) (interface{}, error) {
-	repositoryLogger.Info("Getting all sensors...")
+	s.logger.Info("Getting all sensors...")
 	var sensors []entity.Sensor
 	err := executeSelectQuery(ctx, query.GetAllSensors, s.postgreClient, &sensors)
 	if err != nil {
@@ -39,28 +46,16 @@ func (s *sensorRepository) GetAll(ctx context.Context) (interface{}, error) {
 	return sensors, nil
 }
 
-func (s *sensorRepository) GetByID(ctx context.Context, id int) (interface{}, error) {
-	repositoryLogger.Debugf("Getting sensor by ID: %d", id)
+func (s *sensorRepository) GetByID(ctx context.Context, sensorID int) (interface{}, error) {
+	s.logger.Debugf("Getting sensor by ID: %d", sensorID)
 	var sensors entity.Sensor
 
-	err := executeSelectQuery(ctx, query.GetSensorByID, s.postgreClient, &sensors, id)
+	err := executeSelectQuery(ctx, query.GetSensorByID, s.postgreClient, &sensors, sensorID)
 	if err != nil {
 		return nil, err
 	}
 
 	return sensors, nil
-}
-
-func (s *sensorRepository) Add(ctx context.Context, model interface{}) error {
-	sensor := model.(dto.Sensor)
-	repositoryLogger.Infof("Adding sensor with name: %s...", sensor.Name)
-
-	sensorGroupID, err := s.GetSensorGroupByName(ctx, sensor.SensorGroups)
-	if err != nil {
-		return err
-	}
-
-	return executeModifyingQuery(ctx, query.AddSensor, s.postgreClient, sensor.Name, sensor.Description, sensor.DeviceId, sensorGroupID, sensor.Unit)
 }
 
 func (s *sensorRepository) Update(ctx context.Context, model interface{}) error {
@@ -75,11 +70,6 @@ func (s *sensorRepository) Update(ctx context.Context, model interface{}) error 
 	}
 
 	return executeModifyingQuery(ctx, query.UpdateSensor, s.postgreClient, sensor.Name, sensor.Description, sensorGroupID, sensor.Unit, sensor.ID)
-}
-
-func (s *sensorRepository) Delete(ctx context.Context, id int) error {
-	repositoryLogger.Infof("Deleting sensor with id: %s", id)
-	return executeModifyingQuery(ctx, query.DeleteSensor, s.postgreClient, id)
 }
 
 func (s *sensorRepository) GetSensorIDByName(ctx context.Context, name string) (string, error) {
@@ -101,16 +91,6 @@ func (s *sensorRepository) GetSensorGroupByName(ctx context.Context, sensorGroup
 
 	return sensorGroupID, nil
 }
-
-// func (s *sensorRepository) GetSensorByID(ctx context.Context, id string) (entity.Sensor, error) {
-// 	var sensor entity.Sensor
-// 	err := executeSelectQuery(query.GetSensorByID, s.postgreClient, &sensor)
-// 	if err != nil {
-// 		return entity.Sensor{}, err
-// 	}
-
-// 	return sensor, nil
-// }
 
 func (s *sensorRepository) GetSensorByDeviceID(ctx context.Context, deviceID string) ([]entity.Sensor, error) {
 	var sensors []entity.Sensor

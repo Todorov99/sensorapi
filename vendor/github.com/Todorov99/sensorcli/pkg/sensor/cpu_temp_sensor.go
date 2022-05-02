@@ -17,15 +17,20 @@ const (
 )
 
 type cpuTempSensor struct {
+	cpuTempUnit     string
 	cpuTemp         string
 	deviceID        int32
 	sensors         []Sensor
+	group           string
 	thermalFilePath string
 }
 
 // CreateTempSensor creates instance of temperature sensor.
 func CreateTempSensor() ISensor {
-	return &cpuTempSensor{}
+	return &cpuTempSensor{
+		cpuTempUnit: "C",
+		group:       tempSensor,
+	}
 }
 
 // GetSensorData gets the temperature sensor data
@@ -54,7 +59,7 @@ func (tempS *cpuTempSensor) SetSysInfoFile(filepath string) {
 
 func (tempS *cpuTempSensor) ValidateUnit() error {
 	sensorLogger.Info("Validating temperature sensor units...")
-	var err error
+	var merr error
 
 	currentDeviceSensors, err := device.GetDeviceSensorsByGroup(tempSensor)
 	if err != nil {
@@ -64,12 +69,16 @@ func (tempS *cpuTempSensor) ValidateUnit() error {
 	tempS.sensors = currentDeviceSensors
 
 	for _, currentSensor := range tempS.sensors {
-		if currentSensor.Unit != "F" && currentSensor.Unit != "C" {
-			err = multierror.Append(err, fmt.Errorf("invalid temperature unit %q", currentSensor.Unit))
+		if currentSensor.Unit != tempS.cpuTempUnit {
+			merr = multierror.Append(err, fmt.Errorf("invalid temperature unit %q", currentSensor.Unit))
+		}
+
+		if currentSensor.SensorGroups != tempS.group {
+			merr = multierror.Append(err, fmt.Errorf("invalid temperature sensor group %q", currentSensor.SensorGroups))
 		}
 	}
 
-	return err
+	return merr
 }
 
 func (tempS *cpuTempSensor) getTempMeasurments(ctx context.Context, format string, filePath ...string) ([]Measurment, error) {
@@ -95,30 +104,28 @@ func (tempS *cpuTempSensor) getTempMeasurments(ctx context.Context, format strin
 	return newMeasurements(cpuTempInfo)
 }
 
-func (tempS *cpuTempSensor) getTempFromSensor(ctx context.Context) (cpuTempSensor, error) {
+func (tempS cpuTempSensor) getTempFromSensor(ctx context.Context) (cpuTempSensor, error) {
 	sensorLogger.Info("Getting temperature from sensor")
-	tempSensor := cpuTempSensor{}
 
 	if tempS.thermalFilePath != "" {
 		temp, err := readSysFile(tempS.thermalFilePath)
 		if err != nil {
-			return tempSensor, err
+			return tempS, err
 		}
-		tempSensor.cpuTemp = temp
-		return tempSensor, nil
+		tempS.cpuTemp = temp
+		return tempS, nil
 	}
 
 	sensorTeperatureInfo, err := host.SensorsTemperaturesWithContext(ctx)
 	if err != nil {
-		return tempSensor, err
+		return tempS, err
 	}
 
 	cpuTemp := sensorTeperatureInfo[0].Temperature
 	sensorLogger.Info("Temperature from sensor is successfully got")
 
-	return cpuTempSensor{
-		cpuTemp: strconv.FormatFloat(cpuTemp, 'f', 1, 64),
-	}, nil
+	tempS.cpuTemp = strconv.FormatFloat(cpuTemp, 'f', 1, 64)
+	return tempS, nil
 }
 
 func readSysFile(filePath string) (string, error) {

@@ -24,8 +24,8 @@ func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*databaseCfg,
 	}
 
 	configLogger.Debug("Initializing influx db 2.0 client")
-	influxAddress := fmt.Sprintf("http://%s:%s/", applicationProperties.InfluxProps.ServiceName, getEnv(applicationProperties.InfluxProps.Port))
-	tokenSecret, err := vault.Get(applicationProperties.InfluxProps.TokenSecret)
+	influxAddress := fmt.Sprintf("http://%s:%s/", applicationProperties.Services.InfluxProps.ServiceName, getEnv(applicationProperties.Services.InfluxProps.Port))
+	tokenSecret, err := vault.Get(applicationProperties.Services.InfluxProps.TokenSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -33,13 +33,13 @@ func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*databaseCfg,
 	influxdbClient := influxdb2.NewClient(influxAddress, tokenSecret.Value)
 
 	configLogger.Debug("Initializing postgres DB client")
-	postgreSecret, err := vault.Get(applicationProperties.PostgreProps.PasswordSecret)
+	postgreSecret, err := vault.Get(applicationProperties.Services.PostgreProps.PasswordSecret)
 	if err != nil {
 		return nil, err
 	}
 
 	postgreConnectionString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		postgreSecret.Name, postgreSecret.Value, applicationProperties.PostgreProps.ServiceName, getEnv(applicationProperties.PostgreProps.Port), applicationProperties.PostgreProps.DatabaseName, applicationProperties.PostgreProps.SSLMode)
+		postgreSecret.Name, postgreSecret.Value, applicationProperties.Services.PostgreProps.ServiceName, getEnv(applicationProperties.Services.PostgreProps.Port), applicationProperties.Services.PostgreProps.DatabaseName, applicationProperties.Services.PostgreProps.SSLMode)
 	postgreClient, err := sql.Open("postgres", postgreConnectionString)
 	if err != nil {
 		return nil, err
@@ -53,8 +53,8 @@ func NewDatabaseCfg(applicationProperties *ApplicationProperties) (*databaseCfg,
 	configLogger.Debug("Database Config successfully initialized")
 	return &databaseCfg{
 		influxDbClient: influxdbClient,
-		influxOrg:      applicationProperties.InfluxProps.Org,
-		influxBucket:   applicationProperties.InfluxProps.Bucket,
+		influxOrg:      applicationProperties.Services.InfluxProps.Org,
+		influxBucket:   applicationProperties.Services.InfluxProps.Bucket,
 		postreDbClient: postgreClient,
 	}, nil
 }

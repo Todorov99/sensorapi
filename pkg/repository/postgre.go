@@ -14,7 +14,6 @@ func executeSelectQuery(ctx context.Context, query string, postgreClient *sql.DB
 	var objects []map[string]interface{}
 
 	rowsRs, err := postgreClient.QueryContext(ctx, query, args...)
-	//TODO make proper check
 	if rowsRs == nil {
 		return nil
 	}

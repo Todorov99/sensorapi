@@ -4,13 +4,15 @@ CREATE TABLE users (
    pass     VARCHAR(1000) NOT NULL,
    first_name    VARCHAR(255) NOT NULL,
    last_name     VARCHAR(1000) NOT NULL,
-   email     VARCHAR(1000) NOT NULL
+   email     VARCHAR(1000) NOT NULL,
+   CONSTRAINT user_id PRIMARY KEY (id)
 );
 
 CREATE TABLE device (
    id serial NOT NULL,
    name    VARCHAR(255) NOT NULL,
    description     VARCHAR(1000) NOT NULL,
+   user_id integer REFERENCES users(id),
    CONSTRAINT device_id PRIMARY KEY (id)
 );
 
@@ -54,8 +56,8 @@ INSERT INTO sensor(
 		('cpuCores', 'Gets the number of CPU cores', 'count', '2'),
 		('cpuFrequency', 'Measures CPU frequency in a provided unit', 'GHz', '2'),
 		('memoryTotal', 'Measures memory total RAM', 'GigaBytes', '3'),
-		('memoryAvailable', 'Gets the available RAM in a provided unit', 'Bytes', '3'),
-		('memoryUsed', 'Gets the used RAM from the programs in a provided unit', 'Bytes', '3'),
+		('memoryAvailable', 'Gets the available RAM in a provided unit', 'GigaBytes', '3'),
+		('memoryUsed', 'Gets the used RAM from the programs in a provided unit', 'GigaBytes', '3'),
 		('memoryUsedPercentage', 'Used percentage RAM from the programs', '%', '3');
 
 INSERT INTO device_sensor(

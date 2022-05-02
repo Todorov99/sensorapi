@@ -24,12 +24,11 @@ func createPoint(data entity.Measurement) (*write.Point, error) {
 		return nil, err
 	}
 
-	tags := map[string]string{"deviceID": data.DeviceID, "sensorID": data.SensorID}
+	tags := map[string]string{"deviceID": data.DeviceID, "sensorID": data.SensorID, "userID": strconv.Itoa(data.UserID)}
 	fields := map[string]interface{}{
 		"value": value,
 	}
 
-	fmt.Println(measurementTime)
 	point := influxdb2.NewPoint("sensor", tags, fields, measurementTime)
 	return point, nil
 }
@@ -43,12 +42,12 @@ func writePointToBatch(measurementData entity.Measurement, influxClient influxdb
 
 	influxDbPoint, err := createPoint(measurementData)
 	if err != nil {
-		repositoryLogger.Panic(fmt.Errorf("failed creating a influx DB point: %w", err))
+		panic(fmt.Errorf("failed creating a influx DB point: %w", err))
 	}
 
 	err = writeAPI.WritePoint(context.Background(), influxDbPoint)
 	if err != nil {
-		repositoryLogger.Panic(err)
+		panic(err)
 	}
 
 }
@@ -78,7 +77,6 @@ func executeSelectQueryInflux(ctx context.Context, querry string, isType bool, i
 	}
 
 	if queryResult.Err() != nil {
-		repositoryLogger.Errorf("query error: %w", queryResult.Err())
 		return measurement, queryResult.Err()
 	}
 

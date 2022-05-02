@@ -73,14 +73,18 @@ func getSensorMeasurements(ctx context.Context, sensorGroup, sensorSysFile strin
 	return sensorMeasurements, nil
 }
 
-func loadDeviceConfig() (*sensor.Device, error) {
+func loadDeviceConfig(cfgPath string) (*sensor.Device, error) {
 	cmdLogger.Debugf("Loading device config...")
-	fileName, err := filepath.Abs("./device.yaml")
-	if err != nil {
-		return nil, err
+
+	if cfgPath == "" {
+		fileName, err := filepath.Abs("./device.yaml")
+		if err != nil {
+			return nil, err
+		}
+		cfgPath = fileName
 	}
 
-	yamlFile, err := ioutil.ReadFile(fileName)
+	yamlFile, err := ioutil.ReadFile(cfgPath)
 	if err != nil {
 		return nil, err
 	}

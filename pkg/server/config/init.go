@@ -10,6 +10,8 @@ type serverCfg struct {
 	databaseCfg   *databaseCfg
 	jwtCfg        *jwtCfg
 	mailSenderCfg *mailSender
+	vault         string
+	userCfg       User
 }
 
 func init() {
@@ -32,6 +34,8 @@ func init() {
 		databaseCfg:   dbCfg,
 		jwtCfg:        jwtConfig,
 		mailSenderCfg: NewMailSender(applicationProperties),
+		vault:         applicationProperties.VaultType,
+		userCfg:       applicationProperties.User,
 	}
 
 	serverConfig = serverCfg
@@ -47,4 +51,12 @@ func GetJWTCfg() *jwtCfg {
 
 func GetMailSenderCfg() *mailSender {
 	return serverConfig.mailSenderCfg
+}
+
+func GetUserCfg() User {
+	return serverConfig.userCfg
+}
+
+func GetVault() string {
+	return serverConfig.vault
 }

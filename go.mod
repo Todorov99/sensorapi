@@ -3,9 +3,8 @@ module github.com/Todorov99/sensorapi
 go 1.17
 
 require (
-	github.com/Todorov99/sensorcli v0.0.0-20220412215640-74349e5b1bf1
+	github.com/Todorov99/sensorcli v0.0.0-20220502185647-3f13e24875c1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.0
 	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040
 	github.com/lib/pq v1.10.2
@@ -17,6 +16,7 @@ require (
 )
 
 require (
+	github.com/go-resty/resty/v2 v2.7.0 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.1 // indirect

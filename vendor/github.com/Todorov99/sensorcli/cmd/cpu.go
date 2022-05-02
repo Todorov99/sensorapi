@@ -16,15 +16,14 @@ limitations under the License.
 package cmd
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"strings"
 	"time"
 
+	"github.com/Todorov99/sensorcli/pkg/client"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
 	"github.com/Todorov99/sensorcli/pkg/util"
 	"github.com/Todorov99/sensorcli/pkg/writer"
@@ -38,8 +37,13 @@ var (
 	totalDuration  float64
 	file           string
 	webHook        string
+	mailHook       string
+	email          string
+	username       string
+	password       string
 	generateReport bool
 	reportType     string
+	configFilePath string
 )
 
 // cpuCmd represents the cpu command
@@ -89,8 +93,14 @@ func init() {
 	cpuCmd.Flags().Int64Var(&deltaDuration, "delta_duration", 3, "The period of which you will get your sensor data.")
 	cpuCmd.Flags().StringVar(&file, "output_file", "", "Writing the output into CSV file.")
 	cpuCmd.Flags().Float64Var(&totalDuration, "total_duration", 60.0, "Terminating the whole program after specified duration")
-	cpuCmd.Flags().StringVar(&webHook, "web_hook_url", "", "Expose to current port.")
-	cpuCmd.Flags().StringVar(&reportType, "reportType", "xlsx", "The type of the report file that has to be generated")
+	cpuCmd.Flags().StringVar(&username, "username", "", "The username of the user used for remote execution")
+	cpuCmd.Flags().StringVar(&password, "password", "", "The username of the user used for remote execution")
+	cpuCmd.Flags().StringVar(&webHook, "web_hook_url", "", "Flag used for sending measurements to the REST API")
+	cpuCmd.Flags().StringVar(&mailHook, "mail_hook_url", "", "Flag used for sending mails to the mail REST API")
+	cpuCmd.Flags().StringVar(&email, "email", "", "The email to which the final result should be send")
+
+	cpuCmd.Flags().StringVar(&reportType, "reportType", "xlsx", "The type of the report file that has to be generated. Possible values xlsx, csv.")
+	cpuCmd.Flags().StringVar(&configFilePath, "configFilePath", "", "The path to the configuration file for the measurements")
 	cpuCmd.Flags().BoolVar(&generateReport, "generateReport", false, "generate xslx report file")
 
 	cpuCmd.Flags().StringSliceVar(&sensorGroups, "sensor_group", []string{""}, "There are three main sensor groups: CPU_TEMP, CPU_USAGE and MEMORY_USAGE. Each senosr group could have system file that will hold specific information")
@@ -115,13 +125,14 @@ func getSensorGroupsWithSystemFile(sensorflag []string) map[string]string {
 
 func terminateForTotalDuration(ctx context.Context) error {
 	appTerminaitingDuration := time.After(getTotalDurationInSeconds())
-	device, err := loadDeviceConfig()
+	device, err := loadDeviceConfig(configFilePath)
 	if err != nil {
 		return err
 	}
 	groups := getSensorGroupsWithSystemFile(sensorGroups)
 	cpu := NewCpu(groups)
-	reportWriter := writer.New("measurement_" + time.Now().Format(time.RFC3339) + "." + reportType)
+	reportFile := "measurement_" + time.Now().Format(sensor.TimeFormat) + "." + reportType
+	reportWriter := writer.New(reportFile)
 
 	for {
 		select {
@@ -129,6 +140,27 @@ func terminateForTotalDuration(ctx context.Context) error {
 			cmdLogger.Error(ctx.Err())
 			return ctx.Err()
 		case <-appTerminaitingDuration:
+			if mailHook != "" {
+				mailSenderClient := client.NewMailSenderCliet(mailHook)
+				sender := client.MailSender{
+					Subject: "Measurements from the CLI",
+					To: []string{
+						email,
+					},
+					Body: "Measurements started from the CLI has finished",
+				}
+				if generateReport {
+					err := mailSenderClient.SendWithAttachments(ctx, sender, []string{reportFile})
+					if err != nil {
+						return err
+					}
+				} else {
+					err := mailSenderClient.Send(ctx, sender)
+					if err != nil {
+						return err
+					}
+				}
+			}
 			return nil
 		default:
 			multipleSensorsData, err := cpu.GetMeasurements(ctx, device)
@@ -164,41 +196,50 @@ func getMultipleSensorsMeasurements(ctx context.Context, groups map[string]strin
 
 func getMeasurementsInDeltaDuration(ctx context.Context, reportWriter writer.ReportWriter, generateReport bool, sensorData []sensor.Measurment, deltaDuration time.Duration) error {
 	cmdLogger.Info("Getting measurements in delta duration...")
-
 	measurementDuration := time.After(deltaDuration)
 	done := make(chan bool)
+	errChan := make(chan error)
+
 	sensorsData := sendSensorData(sensorData, done)
 
 	defer func() {
 		close(done)
 	}()
 
+	apiClient := client.NewAPIClient(ctx, webHook, username, password)
+
+	if generateReport {
+
+		go func() {
+			if reportType == "xlsx" {
+				err := reportWriter.WritoToXslx(sensorData)
+				if err != nil {
+					errChan <- fmt.Errorf("error during writing in XLSX file: %w", err)
+					return
+				}
+			}
+
+			if reportType == "csv" {
+				var sensorsData []string
+				sensorsData = append(sensorsData, util.ParseDataAccordingToFormat(format, sensorData))
+				err := reportWriter.WriteOutputToCSV(sensorsData)
+				if err != nil {
+					errChan <- fmt.Errorf("error during writing in CSV file: %w", err)
+					return
+				}
+			}
+		}()
+	}
+
 	for {
 		select {
 		case data := <-sensorsData:
 			if webHook != "" {
 				go func() {
-					webHookURL(webHook, util.ParseDataAccordingToFormat("JSON", data))
-				}()
-			}
-
-			if generateReport {
-				go func() {
-
-					if reportType == "xlsx" {
-						err := reportWriter.WritoToXslx(sensorData)
-						if err != nil {
-							cmdLogger.Errorf("error during writing in XLSX file: %w", err)
-						}
-					}
-
-					if reportType == "csv" {
-						var sensorsData []string
-						sensorsData = append(sensorsData, util.ParseDataAccordingToFormat(format, data))
-						err := reportWriter.WriteOutputToCSV(sensorsData)
-						if err != nil {
-							cmdLogger.Errorf("error during writing in CSV file: %w", err)
-						}
+					resp := apiClient.SendMetrics(ctx, username, password, data)
+					if resp.Err != nil {
+						errChan <- resp.Err
+						return
 					}
 				}()
 			}
@@ -207,6 +248,10 @@ func getMeasurementsInDeltaDuration(ctx context.Context, reportWriter writer.Rep
 		case <-measurementDuration:
 			done <- true
 			return nil
+		case err := <-errChan:
+			done <- true
+			cmdLogger.Error(err)
+			return err
 		case <-ctx.Done():
 			done <- true
 			cmdLogger.Error(ctx.Err())
@@ -218,9 +263,7 @@ func getMeasurementsInDeltaDuration(ctx context.Context, reportWriter writer.Rep
 
 func sendSensorData(sensorsInfo []sensor.Measurment, done chan bool) <-chan sensor.Measurment {
 	cmdLogger.Info("Sending sensor data...")
-
 	out := make(chan sensor.Measurment)
-
 	go func() {
 		for _, currentSensorInfo := range sensorsInfo {
 			out <- currentSensorInfo
@@ -241,9 +284,4 @@ func getDeltaDurationInSeconds() time.Duration {
 
 func getTotalDurationInSeconds() time.Duration {
 	return time.Duration(totalDuration) * time.Second
-}
-
-func webHookURL(url string, data string) {
-	var json = []byte(data)
-	http.Post(url, "application/json", bytes.NewBuffer(json))
 }

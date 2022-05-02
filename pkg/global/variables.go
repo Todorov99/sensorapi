@@ -18,9 +18,14 @@ const (
 )
 
 const (
-	VaultPath               = "./vault.yaml"
+	VaultPath               = "./cfg/vault.yaml"
 	PlainVaultType          = "plain"
-	ApplicationPropertyFile = "./application_properties.yaml"
+	ApplicationPropertyFile = "./cfg/application_properties.yaml"
+	CfgFileName             = "./cliresources/device_cfg.yaml"
+	CliResourceDir          = "./cliresources"
+	CliBinariesDir          = "./binaries"
+	CliZipCfg               = "cli_cfg.zip"
+	DeviceCfgChecksum       = "./cliresources/.checksum"
 )
 
 const (

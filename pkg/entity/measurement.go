@@ -5,4 +5,5 @@ type Measurement struct {
 	Value      string `mapstructure:"value,omitempty"`
 	SensorID   string `mapstructure:"sensorId,omitempty"`
 	DeviceID   string `mapstructure:"deviceId,omitempty"`
+	UserID     int    `mapstructure:"userId,omitempty"`
 }

@@ -3,13 +3,17 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/Todorov99/sensorapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/global"
+	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/Todorov99/sensorapi/pkg/service"
+	"github.com/dgrijalva/jwt-go"
 )
 
 type DeviceContoller interface {
-	GenerateDeviceCfg(w http.ResponseWriter, r *http.Request)
+	GenerateDeviceCfg(w http.ResponseWriter, r *http.Request, token *jwt.Token)
 	IController
 }
 
@@ -23,16 +27,16 @@ func NewDeviceController() DeviceContoller {
 	}
 }
 
-func (d *deviceController) GetAll(w http.ResponseWriter, r *http.Request) {
+func (d *deviceController) GetAll(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
 
-	devices, err := d.deviceService.GetAll(r.Context())
+	devices, err := d.deviceService.GetAll(r.Context(), config.GetJWTUserIDClaim(token))
 	response(w, "Device GET query execution.", err, devices, http.StatusNotFound)
 }
 
-func (d *deviceController) GetByID(w http.ResponseWriter, r *http.Request) {
+func (d *deviceController) GetByID(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -40,11 +44,11 @@ func (d *deviceController) GetByID(w http.ResponseWriter, r *http.Request) {
 	deviceID := getIDFromPathVariable(r)
 	controllerLogger.Infof("Getting device with ID: %q", deviceID)
 
-	devices, err := d.deviceService.GetById(r.Context(), deviceID)
+	devices, err := d.deviceService.GetById(r.Context(), deviceID, config.GetJWTUserIDClaim(token))
 	response(w, "Device GET query execution.", err, devices, http.StatusNotFound)
 }
 
-func (d *deviceController) Post(w http.ResponseWriter, r *http.Request) {
+func (d *deviceController) Post(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -57,11 +61,12 @@ func (d *deviceController) Post(w http.ResponseWriter, r *http.Request) {
 	}
 
 	controllerLogger.Debugf("Post request with device: %q", addDeviceDto)
-	err = d.deviceService.Add(r.Context(), addDeviceDto)
+
+	err = d.deviceService.Add(r.Context(), addDeviceDto, config.GetJWTUserIDClaim(token))
 	response(w, "Device POST query execution...", err, addDeviceDto, http.StatusConflict)
 }
 
-func (d *deviceController) Put(w http.ResponseWriter, r *http.Request) {
+func (d *deviceController) Put(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -76,11 +81,11 @@ func (d *deviceController) Put(w http.ResponseWriter, r *http.Request) {
 	updateDeviceDto.ID = getIDFromPathVariable(r)
 	controllerLogger.Debugf("Updating device with ID: %q", updateDeviceDto.ID)
 
-	err = d.deviceService.Update(r.Context(), updateDeviceDto)
+	err = d.deviceService.Update(r.Context(), updateDeviceDto, config.GetJWTUserIDClaim(token))
 	response(w, "Device PUT query execution.", err, updateDeviceDto, http.StatusConflict)
 }
 
-func (d *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
+func (d *deviceController) Delete(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
 	defer func() {
 		r.Body.Close()
 	}()
@@ -88,17 +93,22 @@ func (d *deviceController) Delete(w http.ResponseWriter, r *http.Request) {
 	deviceID := getIDFromPathVariable(r)
 	controllerLogger.Debugf("Deleting device with ID: %q", deviceID)
 
-	device, err := d.deviceService.Delete(r.Context(), deviceID)
+	device, err := d.deviceService.Delete(r.Context(), deviceID, config.GetJWTUserIDClaim(token))
 	response(w, "Device DELETE query execution.", err, device, http.StatusConflict)
 }
 
-func (d *deviceController) GenerateDeviceCfg(w http.ResponseWriter, r *http.Request) {
+func (d *deviceController) GenerateDeviceCfg(w http.ResponseWriter, r *http.Request, token *jwt.Token) {
+
 	defer func() {
 		r.Body.Close()
+		_ = os.RemoveAll(global.CliResourceDir)
 	}()
 
 	deviceID := getIDFromPathVariable(r)
-	filename, err := d.deviceService.GenerateDeviceCfg(r.Context(), deviceID)
+
+	binaryOS := r.URL.Query()
+
+	filename, err := d.deviceService.GenerateDeviceCfg(r.Context(), deviceID, config.GetJWTUserIDClaim(token), binaryOS.Get("OS"))
 	if err != nil {
 		response(w, "Failed generating device cfg", err, nil, http.StatusBadRequest)
 		return
