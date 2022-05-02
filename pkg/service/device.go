@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/entity"
@@ -25,7 +26,7 @@ type DeviceService interface {
 	Add(ctx context.Context, model interface{}, userID int) error
 	Update(ctx context.Context, model interface{}, userID int) error
 	Delete(ctx context.Context, deviceID, userID int) (interface{}, error)
-	GenerateDeviceCfg(ctx context.Context, deviceID, userID int) (string, error)
+	GenerateDeviceCfg(ctx context.Context, deviceID, userID int, binaryOS string) (string, error)
 }
 
 type deviceService struct {
@@ -44,13 +45,14 @@ func NewDeviceService() DeviceService {
 	}
 }
 
-func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID int) (string, error) {
+func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID int, binaryOS string) (string, error) {
 	d.logger.Debug("Generating device cfg...")
-	cfgFileName := "./cliresources/device_cfg.yaml"
+	err := os.MkdirAll(global.CliResourceDir, 0777)
+	if err != nil {
+		return "", err
+	}
 
-	cliZipCfg := "cli_cfg.zip"
-
-	err := os.MkdirAll("./cliresources", 0777)
+	err = copyBinary(global.CliBinariesDir, binaryOS, global.CliResourceDir)
 	if err != nil {
 		return "", err
 	}
@@ -60,7 +62,7 @@ func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID 
 		return "", err
 	}
 
-	f, err := os.Create(cfgFileName)
+	f, err := os.Create(global.CfgFileName)
 	if err != nil {
 		return "", err
 	}
@@ -85,13 +87,13 @@ func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID 
 		return "", err
 	}
 
-	err = zipSource("./cliresources", cliZipCfg)
+	err = zipSource(global.CliResourceDir, global.CliZipCfg)
 	if err != nil {
 		return "", err
 	}
 
 	d.logger.Debug("Device cfg successfully generated")
-	return cliZipCfg, nil
+	return global.CliZipCfg, nil
 }
 
 func (d *deviceService) GetAll(ctx context.Context, userID int) (interface{}, error) {
@@ -281,4 +283,42 @@ func zipSource(source, target string) error {
 		_, err = io.Copy(headerWriter, f)
 		return err
 	})
+}
+
+func copyBinary(sourceDir, OS, dest string) error {
+	dirEntries, err := os.ReadDir(sourceDir)
+	if err != nil {
+		return err
+	}
+
+	var osBasedBinaryFilename string
+	for _, f := range dirEntries {
+		if strings.HasSuffix(f.Name(), OS) {
+			osBasedBinaryFilename = f.Name()
+			break
+		}
+	}
+
+	if osBasedBinaryFilename == "" {
+		return fmt.Errorf("invalid OS: %s", OS)
+	}
+
+	original, err := os.Open(sourceDir + "/" + osBasedBinaryFilename)
+	if err != nil {
+		return err
+	}
+	defer original.Close()
+
+	new, err := os.Create(dest + "/" + osBasedBinaryFilename)
+	if err != nil {
+		return err
+	}
+	defer new.Close()
+
+	_, err = io.Copy(new, original)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
