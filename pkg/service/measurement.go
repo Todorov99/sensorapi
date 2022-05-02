@@ -12,9 +12,10 @@ import (
 	"github.com/Todorov99/sensorapi/pkg/dto"
 	"github.com/Todorov99/sensorapi/pkg/entity"
 	"github.com/Todorov99/sensorapi/pkg/global"
-	"github.com/Todorov99/sensorapi/pkg/mailsender"
 	"github.com/Todorov99/sensorapi/pkg/repository"
+	"github.com/Todorov99/sensorapi/pkg/server/config"
 	sensorcmd "github.com/Todorov99/sensorcli/cmd"
+	"github.com/Todorov99/sensorcli/pkg/client"
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/Todorov99/sensorcli/pkg/sensor"
 	"github.com/Todorov99/sensorcli/pkg/writer"
@@ -44,7 +45,7 @@ type measurementService struct {
 	deviceRepository      repository.DeviceRepository
 	sensorRepository      repository.SensorRepository
 	userRepository        repository.UserRepository
-	mailsenderClt         *mailsender.Client
+	mailsenderClt         *client.MailSenderClient
 	monitorProcesses      map[int]map[int]*monitorState
 }
 
@@ -65,7 +66,7 @@ func NewMeasurementService() MeasurementService {
 		sensorRepository:      repository.NewSensorRepository(),
 		deviceRepository:      repository.NewDeviceRepository(),
 		userRepository:        repository.NewUserRepository(),
-		mailsenderClt:         mailsender.New(),
+		mailsenderClt:         client.NewMailSenderCliet(fmt.Sprintf("http://%s:%s", config.GetMailSenderCfg().GetServiceName(), config.GetMailSenderCfg().GetPort())),
 		monitorProcesses:      make(map[int]map[int]*monitorState),
 	}
 }
@@ -108,7 +109,7 @@ func (m measurementService) Monitor(ctx context.Context, email string, userID in
 
 	t := time.NewTicker(dDuration)
 
-	reportSender := dto.MailSenderDto{
+	reportSender := client.MailSender{
 		Subject: "Measurement report",
 		To: []string{
 			email,

@@ -1,4 +1,4 @@
-package mailsender
+package client
 
 import (
 	"bytes"
@@ -7,41 +7,37 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
-	"github.com/Todorov99/sensorapi/pkg/dto"
-	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/go-resty/resty/v2"
+	"github.com/sirupsen/logrus"
 )
 
-var mailsenderLogger = logger.NewLogrus("mailsender", os.Stdout)
-
-type Client struct {
+type MailSenderClient struct {
+	logger      *logrus.Entry
 	restyClient *resty.Client
 }
 
-func New() *Client {
-	mailsenderLogger.Debugf("Initializing mail sender client...")
-
+func NewMailSenderCliet(baseUrl string) *MailSenderClient {
 	resty := resty.New().
-		SetBaseURL(fmt.Sprintf("http://%s:%s", config.GetMailSenderCfg().GetServiceName(), config.GetMailSenderCfg().GetPort()))
+		SetBaseURL(baseUrl)
 
-	return &Client{
+	return &MailSenderClient{
 		restyClient: resty,
+		logger:      logger.NewLogrus("mailsenderclient"),
 	}
 }
 
 // SendWithAttachments sends a mail with attachments to a concrete user.
-func (c *Client) SendWithAttachments(ctx context.Context, sender dto.MailSenderDto, attachments []string) error {
-	mailsenderLogger.Debugf("Sending report file from: %q to: %q", attachments, sender.To)
+func (m *MailSenderClient) SendWithAttachments(ctx context.Context, sender MailSender, attachments []string) error {
+	m.logger.Debugf("Sending report file from: %q to: %q", attachments, sender.To)
 
 	senderInfo, err := json.Marshal(sender)
 	if err != nil {
 		return err
 	}
 
-	resp, err := c.restyClient.R().
+	resp, err := m.restyClient.R().
 		SetContext(ctx).
 		SetFormDataFromValues(setFormDataFiles(attachments)).
 		SetMultipartFields(&resty.MultipartField{
@@ -62,10 +58,10 @@ func (c *Client) SendWithAttachments(ctx context.Context, sender dto.MailSenderD
 	return nil
 }
 
-func (c *Client) Send(ctx context.Context, sender dto.MailSenderDto) error {
-	mailsenderLogger.Debugf("Sending mail to: %q", sender.To)
+func (m *MailSenderClient) Send(ctx context.Context, sender MailSender) error {
+	m.logger.Debugf("Sending mail to: %q", sender.To)
 
-	resp, err := c.restyClient.R().
+	resp, err := m.restyClient.R().
 		SetContext(ctx).
 		SetBody(sender).
 		Post("/api/mail/send")

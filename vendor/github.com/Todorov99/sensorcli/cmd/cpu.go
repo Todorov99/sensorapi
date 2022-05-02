@@ -37,6 +37,8 @@ var (
 	totalDuration  float64
 	file           string
 	webHook        string
+	mailHook       string
+	email          string
 	username       string
 	password       string
 	generateReport bool
@@ -94,6 +96,9 @@ func init() {
 	cpuCmd.Flags().StringVar(&username, "username", "", "The username of the user used for remote execution")
 	cpuCmd.Flags().StringVar(&password, "password", "", "The username of the user used for remote execution")
 	cpuCmd.Flags().StringVar(&webHook, "web_hook_url", "", "Flag used for sending measurements to the REST API")
+	cpuCmd.Flags().StringVar(&mailHook, "mail_hook_url", "", "Flag used for sending mails to the mail REST API")
+	cpuCmd.Flags().StringVar(&email, "email", "", "The email to which the final result should be send")
+
 	cpuCmd.Flags().StringVar(&reportType, "reportType", "xlsx", "The type of the report file that has to be generated. Possible values xlsx, csv.")
 	cpuCmd.Flags().StringVar(&configFilePath, "configFilePath", "", "The path to the configuration file for the measurements")
 	cpuCmd.Flags().BoolVar(&generateReport, "generateReport", false, "generate xslx report file")
@@ -126,7 +131,8 @@ func terminateForTotalDuration(ctx context.Context) error {
 	}
 	groups := getSensorGroupsWithSystemFile(sensorGroups)
 	cpu := NewCpu(groups)
-	reportWriter := writer.New("measurement_" + time.Now().Format(sensor.TimeFormat) + "." + reportType)
+	reportFile := "measurement_" + time.Now().Format(sensor.TimeFormat) + "." + reportType
+	reportWriter := writer.New(reportFile)
 
 	for {
 		select {
@@ -134,6 +140,27 @@ func terminateForTotalDuration(ctx context.Context) error {
 			cmdLogger.Error(ctx.Err())
 			return ctx.Err()
 		case <-appTerminaitingDuration:
+			if mailHook != "" {
+				mailSenderClient := client.NewMailSenderCliet(mailHook)
+				sender := client.MailSender{
+					Subject: "Measurements from the CLI",
+					To: []string{
+						email,
+					},
+					Body: "Measurements started from the CLI has finished",
+				}
+				if generateReport {
+					err := mailSenderClient.SendWithAttachments(ctx, sender, []string{reportFile})
+					if err != nil {
+						return err
+					}
+				} else {
+					err := mailSenderClient.Send(ctx, sender)
+					if err != nil {
+						return err
+					}
+				}
+			}
 			return nil
 		default:
 			multipleSensorsData, err := cpu.GetMeasurements(ctx, device)

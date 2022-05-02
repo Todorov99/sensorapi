@@ -3,7 +3,7 @@ module github.com/Todorov99/sensorapi
 go 1.17
 
 require (
-	github.com/Todorov99/sensorcli v0.0.0-20220502133245-433bee6a309e
+	github.com/Todorov99/sensorcli v0.0.0-20220502185647-3f13e24875c1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/gorilla/mux v1.8.0
