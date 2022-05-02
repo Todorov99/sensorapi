@@ -6,7 +6,7 @@ services:
     ports: 
       - '8086:8086'
   postgredb:
-    image: todorov99/postgredb:1.0.4
+    image: todorov99/postgredb:1.0.5
     container_name: "postgre-bachelor"
     ports:
       - '5432:5432'
@@ -18,12 +18,15 @@ services:
     ports:
       - "8083:8083"
   server:
-    image: todorov99/server:1.0.2
+    image: todorov99/server:1.0.3
     container_name: "server-bachelor"
+    volumes:
+      - /Users/t.todorov/Develop/server/cfg:/sensorapi/cfg
     environment:
       - PORT=8081
     depends_on:
       - 'influxdb'  
       - 'postgredb'
+      - 'mailsender'
     ports:
       - '8081:8081'
