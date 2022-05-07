@@ -18,12 +18,22 @@ services:
   mailsender:
     serviceName: mailsender
     port: "8083"
-authentication:
-  JWT:
-    jwtAudienceSecret: audSecret
-    jwtIssuerSecret: issSecret
-    jwtSigningKey: signingKey
-    expirationTime: 1h
+security:
+  authentication:
+    JWT:
+      jwtAudienceSecret: audSecret
+      jwtIssuerSecret: issSecret
+      jwtSigningKey: signingKey
+      expirationTime: 1h
+  #If tls configuration is not provided HTTP server communication is configured
+  tls:
+    #The cert file is read from ./cfg/tls directly.
+    #If the certificate is signed by a certificate authority,
+    #the certFile should be the concatenation of the server's certificate,
+    #any intermediates, and the CA's certificate.
+    certFile: serverCert.pem
+    #The matching for the certificate private key.
+    privateKey: serverKey.pem
 user:
   userSecret: "userSecret"
   firstname: "Todor"

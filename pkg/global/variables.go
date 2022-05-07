@@ -26,6 +26,7 @@ const (
 	CliBinariesDir          = "./binaries"
 	CliZipCfg               = "cli_cfg.zip"
 	DeviceCfgChecksum       = "./cliresources/.checksum"
+	CertificatesPath        = "./cfg/tls/sec"
 )
 
 const (

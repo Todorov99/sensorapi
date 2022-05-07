@@ -12,6 +12,7 @@ type serverCfg struct {
 	mailSenderCfg *mailSender
 	vault         string
 	userCfg       User
+	tls           *TLS
 }
 
 func init() {
@@ -36,6 +37,7 @@ func init() {
 		mailSenderCfg: NewMailSender(applicationProperties),
 		vault:         applicationProperties.VaultType,
 		userCfg:       applicationProperties.User,
+		tls:           &applicationProperties.Security.TLS,
 	}
 
 	serverConfig = serverCfg
@@ -55,6 +57,10 @@ func GetMailSenderCfg() *mailSender {
 
 func GetUserCfg() User {
 	return serverConfig.userCfg
+}
+
+func GetTLSCfg() *TLS {
+	return serverConfig.tls
 }
 
 func GetVault() string {
