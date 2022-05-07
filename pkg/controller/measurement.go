@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	measurements                = dto.Measurement{}
-	measurementsBetweeTimestamp = dto.MeasurementBetweenTimestamp{}
+	measurements = dto.Measurement{}
 )
 
 type measurementController struct {
@@ -32,14 +31,13 @@ func (m *measurementController) GetAllMeasurementsForSensorAndDeviceIDBetweenTim
 		r.Body.Close()
 	}()
 
-	err := json.NewDecoder(r.Body).Decode(&measurementsBetweeTimestamp)
-	if err != nil {
-		response(w, "Measurement Get query", err, measurementsBetweeTimestamp, 500)
-		return
-	}
+	keys := r.URL.Query()
+	deviceID := keys["deviceId"][0]
+	sensorID := keys["sensorId"][0]
+	startTime := keys["startTime"][0]
+	endTime := keys["endTime"][0]
 
-	measurementsBetweeTimestamp.UserID = config.GetJWTUserIDClaim(token)
-	timestampMeasurements, err := m.measurementService.GetMeasurementsBetweenTimestamp(r.Context(), measurementsBetweeTimestamp)
+	timestampMeasurements, err := m.measurementService.GetMeasurementsBetweenTimestamp(r.Context(), startTime, endTime, sensorID, deviceID, config.GetJWTUserIDClaim(token))
 	if err != nil {
 		response(w, "Get all measurements between timestamp finished with error", err, nil, http.StatusBadRequest)
 		return

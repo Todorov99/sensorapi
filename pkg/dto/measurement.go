@@ -8,11 +8,3 @@ type Measurement struct {
 	DeviceID   string `json:"deviceId,omitempty"`
 	UserID     int    `json:"userId,omitempty"`
 }
-
-type MeasurementBetweenTimestamp struct {
-	StartTime string `json:"startTime,omitempty"`
-	EndTime   string `json:"endTime,omitempty"`
-	SensorID  string `json:"sensorId,omitempty"`
-	DeviceID  string `json:"deviceId,omitempty"`
-	UserID    int    `json:"userId,omitempty"`
-}

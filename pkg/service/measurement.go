@@ -35,7 +35,7 @@ type MeasurementService interface {
 	GetMonitorStatus(deviceID, userID int) dto.MonitorStatus
 	GetSensorsCorrelationCoefficient(ctx context.Context, deviceID1, deviceID2, sensorID1, sensorID2, startTime, endTime string, userID int) (float64, error)
 	GetAverageValueOfMeasurements(ctx context.Context, deviceID, sensorID, startTime, endTime string, userID int) (string, error)
-	GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error)
+	GetMeasurementsBetweenTimestamp(ctx context.Context, startTime, endTime, sensorID, deviceID string, userID int) ([]dto.Measurement, error)
 	AddMeasurements(ctx context.Context, measurement dto.Measurement) error
 }
 
@@ -277,8 +277,8 @@ func (m measurementService) GetAverageValueOfMeasurements(ctx context.Context, d
 	return averageValue, nil
 }
 
-func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context, measurementsBetweeTimestamp dto.MeasurementBetweenTimestamp) ([]dto.Measurement, error) {
-	err := m.ifDeviceAndSensorExists(ctx, measurementsBetweeTimestamp.DeviceID, measurementsBetweeTimestamp.SensorID, measurementsBetweeTimestamp.UserID)
+func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context, startTime, endTime, sensorID, deviceID string, userID int) ([]dto.Measurement, error) {
+	err := m.ifDeviceAndSensorExists(ctx, deviceID, sensorID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -286,11 +286,8 @@ func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context,
 	timestampMeasurements, err := m.measurementRepository.
 		GetMeasurementsBetweenTimestampByDeviceIDBySensorID(
 			ctx,
-			measurementsBetweeTimestamp.StartTime,
-			measurementsBetweeTimestamp.EndTime,
-			measurementsBetweeTimestamp.DeviceID,
-			measurementsBetweeTimestamp.SensorID,
-			measurementsBetweeTimestamp.UserID,
+			startTime, endTime,
+			deviceID, sensorID, userID,
 		)
 	if err != nil {
 		return nil, err
@@ -303,7 +300,7 @@ func (m measurementService) GetMeasurementsBetweenTimestamp(ctx context.Context,
 	}
 
 	if len(measurements) == 0 {
-		return nil, fmt.Errorf("there are not any measurements in the %q - %q timestamp for sensor with ID: %q and device: %q", measurementsBetweeTimestamp.StartTime, measurementsBetweeTimestamp.EndTime, measurementsBetweeTimestamp.SensorID, measurementsBetweeTimestamp.DeviceID)
+		return nil, fmt.Errorf("there are not any measurements in the %q - %q timestamp for sensor with ID: %q and device: %q for user with ID: %q", startTime, endTime, deviceID, sensorID, userID)
 	}
 	return measurements, nil
 }
