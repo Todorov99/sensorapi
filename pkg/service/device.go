@@ -15,6 +15,7 @@ import (
 	"github.com/Todorov99/sensorapi/pkg/entity"
 	"github.com/Todorov99/sensorapi/pkg/global"
 	"github.com/Todorov99/sensorapi/pkg/repository"
+	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/Todorov99/sensorcli/pkg/logger"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sirupsen/logrus"
@@ -49,6 +50,11 @@ func NewDeviceService() DeviceService {
 func (d *deviceService) GenerateDeviceCfg(ctx context.Context, deviceID, userID int, binaryOS string) (string, error) {
 	d.logger.Debug("Generating device cfg...")
 	err := os.MkdirAll(global.CliResourceDir, 0777)
+	if err != nil {
+		return "", err
+	}
+
+	err = copyRootCA(global.CliResourceDir)
 	if err != nil {
 		return "", err
 	}
@@ -291,6 +297,16 @@ func zipSource(source, target string) error {
 	})
 }
 
+func copyRootCA(dest string) error {
+	destCertDir := dest + "/.sec"
+	err := os.MkdirAll(destCertDir, 0700)
+	if err != nil {
+		return err
+	}
+
+	return copyFile(global.CertificatesPath+"/"+config.GetTLSCfg().RootCACert, destCertDir+"/"+"rootCACert.pem")
+}
+
 func copyBinary(sourceDir, OS, dest string) error {
 	dirEntries, err := os.ReadDir(sourceDir)
 	if err != nil {
@@ -309,24 +325,7 @@ func copyBinary(sourceDir, OS, dest string) error {
 		return fmt.Errorf("invalid OS: %s", OS)
 	}
 
-	original, err := os.Open(sourceDir + "/" + osBasedBinaryFilename)
-	if err != nil {
-		return err
-	}
-	defer original.Close()
-
-	new, err := os.Create(dest + "/" + osBasedBinaryFilename)
-	if err != nil {
-		return err
-	}
-	defer new.Close()
-
-	_, err = io.Copy(new, original)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return copyFile(sourceDir+"/"+osBasedBinaryFilename, dest+"/"+osBasedBinaryFilename)
 }
 
 func createFileChecksum(filepath string) error {
@@ -349,6 +348,27 @@ func createFileChecksum(filepath string) error {
 		return err
 	}
 	_, err = checkSumFile.WriteString(fmt.Sprintf("%x", h.Sum(nil)))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func copyFile(source, dest string) error {
+	original, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer original.Close()
+
+	new, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer new.Close()
+
+	_, err = io.Copy(new, original)
 	if err != nil {
 		return err
 	}
