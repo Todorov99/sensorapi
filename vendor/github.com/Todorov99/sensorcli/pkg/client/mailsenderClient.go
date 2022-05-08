@@ -19,7 +19,7 @@ type MailSenderClient struct {
 	restyClient *resty.Client
 }
 
-func NewMailSenderClient(baseUrl, rootCAPemFilePath string) *MailSenderClient {
+func NewMailSenderTLSClient(baseUrl, rootCAPemFilePath string) *MailSenderClient {
 	resty := resty.New().
 		SetBaseURL(baseUrl)
 

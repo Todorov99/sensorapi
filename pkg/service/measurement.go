@@ -66,7 +66,7 @@ func NewMeasurementService() MeasurementService {
 		sensorRepository:      repository.NewSensorRepository(),
 		deviceRepository:      repository.NewDeviceRepository(),
 		userRepository:        repository.NewUserRepository(),
-		mailsenderClt:         client.NewMailSenderClient(fmt.Sprintf("https://%s:%s", config.GetMailSenderCfg().GetServiceName(), config.GetMailSenderCfg().GetPort()), fmt.Sprintf("%s/%s", global.CertificatesPath, config.GetTLSCfg().RootCACert)),
+		mailsenderClt:         client.NewMailSenderTLSClient(fmt.Sprintf("https://%s:%s", config.GetMailSenderCfg().GetServiceName(), config.GetMailSenderCfg().GetPort()), fmt.Sprintf("%s/%s", global.CertificatesPath, config.GetTLSCfg().RootCACert)),
 		monitorProcesses:      make(map[int]map[int]*monitorState),
 	}
 }

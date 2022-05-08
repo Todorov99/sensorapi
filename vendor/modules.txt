@@ -1,4 +1,4 @@
-# github.com/Todorov99/sensorcli v0.0.0-20220508101223-0303acf1a8e4
+# github.com/Todorov99/sensorcli v0.0.0-20220508134054-7d3c76e40e85
 ## explicit; go 1.17
 github.com/Todorov99/sensorcli/cmd
 github.com/Todorov99/sensorcli/pkg/client

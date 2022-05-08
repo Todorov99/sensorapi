@@ -36,10 +36,7 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "sensorcli",
-	Short: "Cli app which gets data from the sensors.",
-	Long: `Cli app which gets cpu temperature data, 
-	cpu usage data and memory usage data from the sensors of your local PC.`,
-
+	Short: "CLI application which gets data from the predefined sensor groups from the hardware where it operates.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return nil
 	},

@@ -31,11 +31,11 @@ import (
 )
 
 var (
-	format         string
-	deltaDuration  int64
-	sensorGroups   []string
-	totalDuration  float64
-	file           string
+	format        string
+	deltaDuration int64
+	sensorGroups  []string
+	totalDuration float64
+	//file           string
 	webHook        string
 	mailHook       string
 	email          string
@@ -50,13 +50,7 @@ var (
 // cpuCmd represents the cpu command
 var cpuCmd = &cobra.Command{
 	Use:   "cpu",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Start collecting hardware metrics",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx := context.Background()
 
@@ -90,23 +84,19 @@ to quickly create a Cobra application.`,
 func init() {
 	rootCmd.AddCommand(cpuCmd)
 
-	cpuCmd.Flags().StringVar(&format, "format", "JSON", "The data could be printed either JSON or YAML format.")
-	cpuCmd.Flags().Int64Var(&deltaDuration, "delta_duration", 3, "The period of which you will get your sensor data.")
-	cpuCmd.Flags().StringVar(&file, "output_file", "", "Writing the output into CSV file.")
-	cpuCmd.Flags().Float64Var(&totalDuration, "total_duration", 60.0, "Terminating the whole program after specified duration")
-	cpuCmd.Flags().StringVar(&username, "username", "", "The username of the user used for remote execution")
-	cpuCmd.Flags().StringVar(&password, "password", "", "The username of the user used for remote execution")
-	cpuCmd.Flags().StringVar(&webHook, "web_hook_url", "", "Flag used for sending measurements to the REST API")
-	cpuCmd.Flags().StringVar(&mailHook, "mail_hook_url", "", "Flag used for sending mails to the mail REST API")
+	cpuCmd.Flags().StringVar(&format, "format", "JSON", "The data could be printed either JSON or YAML format")
+	cpuCmd.Flags().Int64Var(&deltaDuration, "delta_duration", 3, "The period between each measurement")
+	cpuCmd.Flags().Float64Var(&totalDuration, "total_duration", 60.0, "The period in which the hardware measurements will be collected")
+	cpuCmd.Flags().StringVar(&username, "username", "", "The username of the user used for remote authentication to the sensor API")
+	cpuCmd.Flags().StringVar(&password, "password", "", "The password of the user used for remote authentication to the sensor API")
+	cpuCmd.Flags().StringVar(&webHook, "web_hook_url", "", "Base URL to the sensor API")
+	cpuCmd.Flags().StringVar(&mailHook, "mail_hook_url", "", "Base URL to the mailsender API")
 	cpuCmd.Flags().StringVar(&email, "email", "", "The email to which the final result should be send")
-
 	cpuCmd.Flags().StringVar(&rootCAPath, "rootCAPath", "", "The path to the root Certificate Authoritate (CA) used for the TLS client config. If no CA is provided the verification of the certificates is skipped")
-
 	cpuCmd.Flags().StringVar(&reportType, "reportType", "xlsx", "The type of the report file that has to be generated. Possible values xlsx, csv.")
-	cpuCmd.Flags().StringVar(&configDirPath, "configDirPath", "", "The path to the configuration file for the measurements")
-	cpuCmd.Flags().BoolVar(&generateReport, "generateReport", false, "generate xslx report file")
-
-	cpuCmd.Flags().StringSliceVar(&sensorGroups, "sensor_group", []string{""}, "There are three main sensor groups: CPU_TEMP, CPU_USAGE and MEMORY_USAGE. Each senosr group could have system file that will hold specific information")
+	cpuCmd.Flags().StringVar(&configDirPath, "configDirPath", "", "The path to the configuration file for the device for which the hardware measurements will be collected")
+	cpuCmd.Flags().BoolVar(&generateReport, "generateReport", false, "Flag that shows whether to generate report file")
+	cpuCmd.Flags().StringSliceVar(&sensorGroups, "sensor_group", []string{""}, "There are three main sensor groups: CPU_TEMP, CPU_USAGE and MEMORY_USAGE. Each senosor group could have system file that will hold specific information")
 }
 
 func getSensorGroupsWithSystemFile(sensorflag []string) map[string]string {
@@ -148,7 +138,7 @@ func terminateForTotalDuration(ctx context.Context) error {
 			return ctx.Err()
 		case <-appTerminaitingDuration:
 			if mailHook != "" {
-				mailSenderClient := client.NewMailSenderClient(mailHook, rootCAPath)
+				mailSenderClient := client.NewMailSenderTLSClient(mailHook, rootCAPath)
 				sender := client.MailSender{
 					Subject: "Measurements from the CLI",
 					To: []string{
@@ -213,7 +203,7 @@ func getMeasurementsInDeltaDuration(ctx context.Context, reportWriter writer.Rep
 		close(done)
 	}()
 
-	apiClient := client.NewAPIClient(ctx, webHook, rootCAPath)
+	apiClient := client.NewAPITLSClient(ctx, webHook, rootCAPath)
 
 	if generateReport {
 

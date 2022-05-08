@@ -3,7 +3,7 @@ module github.com/Todorov99/sensorapi
 go 1.17
 
 require (
-	github.com/Todorov99/sensorcli v0.0.0-20220508101223-0303acf1a8e4
+	github.com/Todorov99/sensorcli v0.0.0-20220508134054-7d3c76e40e85
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/gorilla/mux v1.8.0
 	github.com/influxdata/influxdb-client-go/v2 v2.3.1-0.20210518120617-5d1fff431040

@@ -25,7 +25,7 @@ type APIClient struct {
 	isExpered bool
 }
 
-func NewAPIClient(ctx context.Context, baseURL, rootCAPemFilePath string) *APIClient {
+func NewAPITLSClient(ctx context.Context, baseURL, rootCAPemFilePath string) *APIClient {
 	var token string
 	restyClt := resty.New().SetBaseURL(baseURL)
 

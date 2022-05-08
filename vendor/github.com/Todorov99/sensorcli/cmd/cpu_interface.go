@@ -14,6 +14,10 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+var (
+	rootCAPathFromCfg = ".sec/rootCACert.pem"
+)
+
 type Cpu interface {
 	//GetMeasurements is func that gets concrete cpu sensor measurements
 	GetMeasurements(ctx context.Context, device interface{}) ([]sensor.Measurment, error)
@@ -92,6 +96,7 @@ func loadDeviceConfig(cfgDirPath string) (*sensor.Device, error) {
 		if err != nil {
 			return nil, err
 		}
+		rootCAPath = rootCAPathFromCfg
 	} else if cfgDirPath != "" {
 		cfgFileName = cfgDirPath + "/device_cfg.yaml"
 	}
