@@ -3,6 +3,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,9 +19,18 @@ type MailSenderClient struct {
 	restyClient *resty.Client
 }
 
-func NewMailSenderCliet(baseUrl string) *MailSenderClient {
+func NewMailSenderTLSClient(baseUrl, rootCAPemFilePath string) *MailSenderClient {
 	resty := resty.New().
 		SetBaseURL(baseUrl)
+
+	if rootCAPemFilePath != "" {
+		resty = resty.SetRootCertificate(rootCAPemFilePath)
+	} else {
+		fmt.Println("Skipping TLS verification...")
+		resty = resty.SetTLSClientConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		})
+	}
 
 	return &MailSenderClient{
 		restyClient: resty,

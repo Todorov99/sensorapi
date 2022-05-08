@@ -7,6 +7,7 @@ import (
 
 	"github.com/Todorov99/sensorapi/pkg/controller"
 	"github.com/Todorov99/sensorapi/pkg/dto"
+	"github.com/Todorov99/sensorapi/pkg/global"
 	"github.com/Todorov99/sensorapi/pkg/server/config"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
@@ -45,7 +46,11 @@ func HandleRequest(port string) error {
 	routes.Handle("/api/measurement/monitor/status/{id}", isAuthorized(measurementController.MonitorStatus)).Methods("GET")
 	routes.Handle("/api/measurement/monitor/report", isAuthorized(measurementController.GetReportFile)).Methods("GET")
 
-	return http.ListenAndServe(fmt.Sprintf(":%s", port), routes)
+	if config.GetTLSCfg() == nil {
+		return http.ListenAndServe(fmt.Sprintf(":%s", port), routes)
+	}
+
+	return http.ListenAndServeTLS(fmt.Sprintf(":%s", port), fmt.Sprintf("%s/%s", global.CertificatesPath, config.GetTLSCfg().CertFile), fmt.Sprintf("%s/%s", global.CertificatesPath, config.GetTLSCfg().PrivateKey), routes)
 }
 
 func isAuthorized(endpoint func(http.ResponseWriter, *http.Request, *jwt.Token)) http.Handler {

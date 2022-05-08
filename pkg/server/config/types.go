@@ -1,10 +1,22 @@
 package config
 
 type ApplicationProperties struct {
-	Services       Services       `yaml:"services,omitempty"`
+	Services  Services `yaml:"services,omitempty"`
+	Security  Security `yaml:"security,omitempty"`
+	VaultType string   `yaml:"vaultType,omitempty"`
+	User      User     `yaml:"user,omitempty"`
+}
+
+type Security struct {
+	TLS            TLS            `yaml:"tls,omitempty"`
 	Authentication Authentication `yaml:"authentication,omitempty"`
-	VaultType      string         `yaml:"vaultType,omitempty"`
-	User           User           `yaml:"user,omitempty"`
+}
+
+type TLS struct {
+	CertFile   string `yaml:"certFile,omitempty"`
+	PrivateKey string `yaml:"privateKey,omitempty"`
+	RootCACert string `yaml:"rootCACert,omitempty"`
+	RootCAKey  string `yaml:"rootCAKey,omitempty"`
 }
 
 type Services struct {
