@@ -31,20 +31,15 @@ usage() {
     echo "Generate CA"
     echo "Example: "
     echo ""
-    echo "./deployment.sh generate --generationType CA  --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --caDuration 3650"
+    echo "./tls.sh generate --generationType CA  --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --caDuration 3650"
     echo ""
     echo ""
     echo "Generate Certificate signed by the CA"
     echo "Example: "
     echo ""
-    echo "./deployment.sh generate --generationType cert --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN localhost --certRequestFile serverCert.csr --certPem serverCert.pem --certKeyPem serverKey.pem"
+    echo "./tls.sh generate --generationType cert --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN DNS:localhost,DNS:sensorapi --certRequestFile serverCert.csr --certPem serverCert.pem --certKeyPem serverKey.pem"
     echo ""
     echo ""
-    echo "Deploy"
-    echo "Example: "
-    echo ""
-    echo "./deployment.sh deploy --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --caDuration 3650 --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN localhost --certRequestFile serverCert.csr --certPem serverCert.pem --certKeyPem serverKey.pem"
-
 }
 
 while [ "$1" != "" ]; do
@@ -142,13 +137,13 @@ O = %s
 OU = %s
 
 [v3_req]
-subjectAltName = DNS:%s' "$CN" "$C" "$L" "$SAN" "$O" "$OU" >> "$certDir/$CERT_REQUEST_CONFIG"
+subjectAltName = %s' "$CN" "$C" "$L" "$O" "$OU" "$SAN" >> "$certDir/$CERT_REQUEST_CONFIG"
 
 #Create certificate private key with the request
 openssl genrsa -out "$certDir/$certKeyPem" 2048
 openssl req -new -key "$certDir/$certKeyPem" -sha256 -out "$certDir/$certRequestFile" -config "$certDir/$CERT_REQUEST_CONFIG"
 
-printf 'subjectAltName = DNS:%s' "$SAN" >> "$certDir/$EXT_FILE"
+printf 'subjectAltName = %s' "$SAN" >> "$certDir/$EXT_FILE"
 openssl x509 -req -sha256 -in "$certDir/$certRequestFile" -CA "$certDir/$caCertPem" -CAkey "$certDir/$caKeyPem" -CAcreateserial -out "$certDir/$certPem" -days "$certDuration" -extfile "$certDir/$EXT_FILE"
 
 rm -r "$certDir/$CERT_REQUEST_CONFIG" "$certDir/$EXT_FILE"
@@ -161,11 +156,5 @@ fi
 
 if [ "$option" == 'generate' ] && [ "$generationType" == 'cert' ]
 then
-    generateCertificate
-fi
-
-if [ "$option" == 'deploy' ]
-then
-    generateRootCA
     generateCertificate
 fi

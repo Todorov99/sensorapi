@@ -31,9 +31,9 @@ security:
     #If the certificate is signed by a certificate authority,
     #the certFile should be the concatenation of the server's certificate,
     #any intermediates, and the CA's certificate.
-    certFile: serverCert.pem
+    certFile: sensorapiCert.pem
     #The matching for the certificate private key.
-    privateKey: serverKey.pem
+    privateKey: sensorapiKey.pem
     rootCACert: rootCACert.pem
     rootCAKey: rootCAKey.pem
 user:
