@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"strings"
@@ -24,9 +25,17 @@ type APIClient struct {
 	isExpered bool
 }
 
-func NewAPIClient(ctx context.Context, baseURL, username, password string) *APIClient {
+func NewAPIClient(ctx context.Context, baseURL, rootCAPemFilePath string) *APIClient {
 	var token string
 	restyClt := resty.New().SetBaseURL(baseURL)
+
+	if rootCAPemFilePath != "" {
+		restyClt = restyClt.SetRootCertificate(rootCAPemFilePath)
+	} else {
+		restyClt = restyClt.SetTLSClientConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		})
+	}
 
 	return &APIClient{
 		logger:    logger.NewLogrus("apiclient"),

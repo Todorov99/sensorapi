@@ -34,6 +34,8 @@ security:
     certFile: serverCert.pem
     #The matching for the certificate private key.
     privateKey: serverKey.pem
+    rootCACert: rootCACert.pem
+    rootCAKey: rootCAKey.pem
 user:
   userSecret: "userSecret"
   firstname: "Todor"

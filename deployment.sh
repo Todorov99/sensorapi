@@ -30,14 +30,19 @@ SAN=
 usage() {
     echo "Generate CA"
     echo "Example: "
+    echo ""
     echo "./deployment.sh generate --generationType CA  --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --caDuration 3650"
-
+    echo ""
+    echo ""
     echo "Generate Certificate signed by the CA"
     echo "Example: "
+    echo ""
     echo "./deployment.sh generate --generationType cert --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN localhost --certRequestFile serverCert.csr --certPem serverCert.pem --certKeyPem serverKey.pem"
-
+    echo ""
+    echo ""
     echo "Deploy"
     echo "Example: "
+    echo ""
     echo "./deployment.sh deploy --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --caDuration 3650 --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN localhost --certRequestFile serverCert.csr --certPem serverCert.pem --certKeyPem serverKey.pem"
 
 }

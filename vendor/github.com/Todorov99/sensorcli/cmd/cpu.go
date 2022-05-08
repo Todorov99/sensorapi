@@ -43,7 +43,8 @@ var (
 	password       string
 	generateReport bool
 	reportType     string
-	configFilePath string
+	configDirPath  string
+	rootCAPath     string
 )
 
 // cpuCmd represents the cpu command
@@ -99,8 +100,10 @@ func init() {
 	cpuCmd.Flags().StringVar(&mailHook, "mail_hook_url", "", "Flag used for sending mails to the mail REST API")
 	cpuCmd.Flags().StringVar(&email, "email", "", "The email to which the final result should be send")
 
+	cpuCmd.Flags().StringVar(&rootCAPath, "rootCAPath", "", "The path to the root Certificate Authoritate (CA) used for the TLS client config. If no CA is provided the verification of the certificates is skipped")
+
 	cpuCmd.Flags().StringVar(&reportType, "reportType", "xlsx", "The type of the report file that has to be generated. Possible values xlsx, csv.")
-	cpuCmd.Flags().StringVar(&configFilePath, "configFilePath", "", "The path to the configuration file for the measurements")
+	cpuCmd.Flags().StringVar(&configDirPath, "configDirPath", "", "The path to the configuration file for the measurements")
 	cpuCmd.Flags().BoolVar(&generateReport, "generateReport", false, "generate xslx report file")
 
 	cpuCmd.Flags().StringSliceVar(&sensorGroups, "sensor_group", []string{""}, "There are three main sensor groups: CPU_TEMP, CPU_USAGE and MEMORY_USAGE. Each senosr group could have system file that will hold specific information")
@@ -125,7 +128,7 @@ func getSensorGroupsWithSystemFile(sensorflag []string) map[string]string {
 
 func terminateForTotalDuration(ctx context.Context) error {
 	appTerminaitingDuration := time.After(getTotalDurationInSeconds())
-	device, err := loadDeviceConfig(configFilePath)
+	device, err := loadDeviceConfig(configDirPath)
 	if err != nil {
 		return err
 	}
@@ -134,6 +137,10 @@ func terminateForTotalDuration(ctx context.Context) error {
 	reportFile := "measurement_" + time.Now().Format(sensor.TimeFormat) + "." + reportType
 	reportWriter := writer.New(reportFile)
 
+	if mailHook != "" && email == "" {
+		return fmt.Errorf("email for sending the result has not been specified")
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -141,7 +148,7 @@ func terminateForTotalDuration(ctx context.Context) error {
 			return ctx.Err()
 		case <-appTerminaitingDuration:
 			if mailHook != "" {
-				mailSenderClient := client.NewMailSenderCliet(mailHook)
+				mailSenderClient := client.NewMailSenderClient(mailHook, rootCAPath)
 				sender := client.MailSender{
 					Subject: "Measurements from the CLI",
 					To: []string{
@@ -206,7 +213,7 @@ func getMeasurementsInDeltaDuration(ctx context.Context, reportWriter writer.Rep
 		close(done)
 	}()
 
-	apiClient := client.NewAPIClient(ctx, webHook, username, password)
+	apiClient := client.NewAPIClient(ctx, webHook, rootCAPath)
 
 	if generateReport {
 

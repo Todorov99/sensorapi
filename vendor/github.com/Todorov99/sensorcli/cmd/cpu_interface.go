@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/Todorov99/sensorcli/pkg/sensor"
@@ -73,18 +76,27 @@ func getSensorMeasurements(ctx context.Context, sensorGroup, sensorSysFile strin
 	return sensorMeasurements, nil
 }
 
-func loadDeviceConfig(cfgPath string) (*sensor.Device, error) {
+func loadDeviceConfig(cfgDirPath string) (*sensor.Device, error) {
 	cmdLogger.Debugf("Loading device config...")
+	cfgFileName := ""
 
-	if cfgPath == "" {
-		fileName, err := filepath.Abs("./device.yaml")
+	if cfgDirPath == "" && webHook == "" {
+		fileName, err := filepath.Abs("./device_cfg.yaml")
 		if err != nil {
 			return nil, err
 		}
-		cfgPath = fileName
+		cfgFileName = fileName
+	} else if webHook != "" && cfgDirPath != "" {
+		cfgFileName = cfgDirPath + "/device_cfg.yaml"
+		err := verifyChecksum(cfgFileName, cfgDirPath+"/.checksum")
+		if err != nil {
+			return nil, err
+		}
+	} else if cfgDirPath != "" {
+		cfgFileName = cfgDirPath + "/device_cfg.yaml"
 	}
 
-	yamlFile, err := ioutil.ReadFile(cfgPath)
+	yamlFile, err := ioutil.ReadFile(cfgFileName)
 	if err != nil {
 		return nil, err
 	}
@@ -96,4 +108,31 @@ func loadDeviceConfig(cfgPath string) (*sensor.Device, error) {
 	}
 
 	return device, nil
+}
+
+func verifyChecksum(cfgFilePath, checkSumPath string) error {
+	checkSumHashBytes, err := os.ReadFile(checkSumPath)
+	if err != nil {
+		return fmt.Errorf("config file has been changes. Get new config from the API and DO NOT change it")
+	}
+
+	f, err := os.Open(cfgFilePath)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		f.Close()
+	}()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return err
+	}
+
+	cfgFileHash := fmt.Sprintf("%x", h.Sum(nil))
+	if string(checkSumHashBytes) != cfgFileHash {
+		return fmt.Errorf("device_cfg file has been changed")
+	}
+
+	return nil
 }
