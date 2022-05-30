@@ -9,6 +9,7 @@ caKeyPem=
 caCertPem=
 caDuration=
 
+CADir=
 certDir=
 certKeyPem=
 certRequestFile=
@@ -66,6 +67,10 @@ while [ "$1" != "" ]; do
             shift
             certDir=$1
             ;;
+        --CADir )
+            shift
+            CADir=$1
+            ;;
         --certKeyPem )
             shift
             certKeyPem=$1
@@ -118,12 +123,13 @@ while [ "$1" != "" ]; do
 done
 
 generateRootCA() {
-    mkdir -p $certDir
-    openssl genrsa -out "$certDir/$caKeyPem" 2048
-    openssl req -x509 -sha256 -new -nodes -key "$certDir/$caKeyPem" -days "$caDuration" -out "$certDir/$caCertPem"
+    mkdir -p $CADir
+    openssl genrsa -out "$CADir/$caKeyPem" 2048
+    openssl req -x509 -sha256 -new -nodes -key "$CADir/$caKeyPem" -days "$caDuration" -out "$CADir/$caCertPem"
 }
 
 generateCertificate() {
+     mkdir -p $certDir
     printf '[req]
 req_extensions = v3_req
 distinguished_name = dn
@@ -144,7 +150,7 @@ openssl genrsa -out "$certDir/$certKeyPem" 2048
 openssl req -new -key "$certDir/$certKeyPem" -sha256 -out "$certDir/$certRequestFile" -config "$certDir/$CERT_REQUEST_CONFIG"
 
 printf 'subjectAltName = %s' "$SAN" >> "$certDir/$EXT_FILE"
-openssl x509 -req -sha256 -in "$certDir/$certRequestFile" -CA "$certDir/$caCertPem" -CAkey "$certDir/$caKeyPem" -CAcreateserial -out "$certDir/$certPem" -days "$certDuration" -extfile "$certDir/$EXT_FILE"
+openssl x509 -req -sha256 -in "$certDir/$certRequestFile" -CA "$CADir/$caCertPem" -CAkey "$CADir/$caKeyPem" -CAcreateserial -out "$certDir/$certPem" -days "$certDuration" -extfile "$certDir/$EXT_FILE"
 
 rm -r "$certDir/$CERT_REQUEST_CONFIG" "$certDir/$EXT_FILE"
 }

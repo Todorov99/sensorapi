@@ -9,14 +9,14 @@
 1. Generate root CA
 
 ```
-    ./tls.sh generate --generationType CA  --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --caDuration 3650
+    ./tls.sh generate --generationType CA  --CADir ./cfg/tls/sec --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --caDuration 3650
 
 ```
 
 2. Generate signed by the CA certificates for the sensor API
 
 ```
-  ./tls.sh generate --generationType cert --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN DNS:localhost,DNS:sensorapi --certRequestFile sensorapiCert.csr --certPem sensorapiCert.pem --certKeyPem sensorapiKey.pem
+  ./tls.sh generate --generationType cert --CADir ./cfg/tls/sec --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN DNS:localhost,DNS:sensorapi --certRequestFile sensorapiCert.csr --certPem sensorapiCert.pem --certKeyPem sensorapiKey.pem
 
 ```
 
@@ -24,7 +24,7 @@
 3. Generate signed by the CA certificates for the mail sender API
 
 ```
-  ./tls.sh generate --generationType cert --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN DNS:localhost,DNS:mailSender --certRequestFile mailSenderCert.csr --certPem mailSenderCert.pem --certKeyPem mailSenderKey.pem
+  ./tls.sh generate --generationType cert --CADir ./cfg/tls/sec --certDir ./cfg/tls/sec --caKeyPem rootCAkey.pem --caCertPem rootCACert.pem --certDuration 365 --CN localhost --C BG --L Sofia --O TT --OU system --SAN DNS:localhost,DNS:mailSender --certRequestFile mailSenderCert.csr --certPem mailSenderCert.pem --certKeyPem mailSenderKey.pem
 
 ```
 
